@@ -1,0 +1,17 @@
+R_DEF: Internal format may change without notice
+local
+color purple_700
+drawable ic_launcher_background
+drawable ic_launcher_foreground
+mipmap ic_launcher
+mipmap ic_launcher_round
+string add_contact
+string app_name
+string emergency_contacts
+string listening
+string sos_button
+string trigger_sos
+string voice_guard
+style Theme.Rakshak
+xml backup_rules
+xml data_extraction_rules
