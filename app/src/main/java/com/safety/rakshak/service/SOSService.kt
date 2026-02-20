@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 class SOSService : Service() {
 
@@ -36,6 +37,7 @@ class SOSService : Service() {
         private const val NOTIFICATION_ID = 2001
         private const val CHANNEL_ID = "sos_channel"
         const val ACTION_TRIGGER_SOS = "TRIGGER_SOS"
+        private const val LOCATION_TIMEOUT_MS = 10_000L // 10 seconds max wait for location
     }
 
     override fun onCreate() {
@@ -54,23 +56,22 @@ class SOSService : Service() {
     }
 
     private fun triggerSOS() {
-        // Fix 3: Check location permission before attempting to start foreground
+        // Check location permission before starting foreground
         if (ContextCompat.checkSelfPermission(
                 this, android.Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            Log.e(TAG, "Location permission not granted, cannot start SOS service")
+            Log.e(TAG, "Location permission not granted")
             stopSelf()
             return
         }
 
-        // Fix 1 & 2: Specify foreground service type and handle exceptions gracefully
+        // Start foreground with correct type
         try {
             val notification = createNotification(
                 "SOS Triggered",
                 "Sending emergency alerts..."
             )
-
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 startForeground(
                     NOTIFICATION_ID,
@@ -80,15 +81,12 @@ class SOSService : Service() {
             } else {
                 startForeground(NOTIFICATION_ID, notification)
             }
-
         } catch (e: Exception) {
-            // App was in background or permission denied at OS level — stop gracefully
             Log.e(TAG, "startForeground failed: ${e.message}")
             stopSelf()
             return
         }
 
-        // Send SOS alerts
         serviceScope.launch {
             try {
                 // Get emergency contacts
@@ -97,46 +95,54 @@ class SOSService : Service() {
                 }
 
                 if (contactsList.isEmpty()) {
-                    updateNotification(
-                        "SOS Error",
-                        "No emergency contacts found. Please add contacts first."
-                    )
+                    updateNotification("SOS Error", "No emergency contacts found. Please add contacts first.")
                     stopSelfAfterDelay()
                     return@launch
                 }
 
-                // Get current location
-                val location = withContext(Dispatchers.IO) {
-                    locationHelper.getCurrentLocation()
+                Log.d(TAG, "Found ${contactsList.size} contacts, getting location...")
+                updateNotification("SOS Triggered", "Getting your location...")
+
+                // Add 10 second timeout — if location takes too long, send SMS without it
+                val location = withTimeoutOrNull(LOCATION_TIMEOUT_MS) {
+                    withContext(Dispatchers.IO) {
+                        locationHelper.getCurrentLocation()
+                    }
+                }
+
+                if (location == null) {
+                    Log.w(TAG, "Location timed out or unavailable — sending SOS without location")
+                    updateNotification("SOS Triggered", "Sending alerts (location unavailable)...")
+                } else {
+                    Log.d(TAG, "Location obtained: ${location.latitude}, ${location.longitude}")
                 }
 
                 // Send SMS alerts
+                updateNotification("SOS Triggered", "Sending SMS to ${contactsList.size} contacts...")
+
                 smsHelper.sendSOSMessage(
                     contacts = contactsList,
                     latitude = location?.latitude,
                     longitude = location?.longitude,
                     onSuccess = {
+                        Log.d(TAG, "SOS SMS sent successfully")
                         updateNotification(
-                            "SOS Sent Successfully",
+                            "SOS Sent ✅",
                             "Emergency alerts sent to ${contactsList.size} contacts"
                         )
                         stopSelfAfterDelay()
                     },
                     onError = { error ->
-                        updateNotification(
-                            "SOS Error",
-                            error
-                        )
+                        Log.e(TAG, "SOS SMS error: $error")
+                        updateNotification("SOS Error ❌", error)
                         stopSelfAfterDelay()
                     }
                 )
+
             } catch (e: Exception) {
                 Log.e(TAG, "SOS coroutine failed: ${e.message}")
                 e.printStackTrace()
-                updateNotification(
-                    "SOS Error",
-                    "Failed: ${e.message}"
-                )
+                updateNotification("SOS Error ❌", "Failed: ${e.message}")
                 stopSelfAfterDelay()
             }
         }
@@ -176,7 +182,7 @@ class SOSService : Service() {
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setAutoCancel(true)
+            .setAutoCancel(false)
             .build()
     }
 

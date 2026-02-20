@@ -11,7 +11,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
 class LocationHelper(private val context: Context) {
-    
+
     private val fusedLocationClient: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(context)
 
@@ -22,15 +22,22 @@ class LocationHelper(private val context: Context) {
         }
 
         try {
+            // Step 1: Flush and get fresh GPS location immediately
             val locationRequest = LocationRequest.Builder(
                 Priority.PRIORITY_HIGH_ACCURACY,
                 1000L
-            ).build()
+            )
+                .setMaxUpdates(1)
+                .setMinUpdateIntervalMillis(0)      // No minimum interval — get it NOW
+                .setMaxUpdateDelayMillis(0)         // No batching delay
+                .setWaitForAccurateLocation(false)  // Don't wait for perfect accuracy
+                .build()
 
             val locationCallback = object : LocationCallback() {
                 override fun onLocationResult(result: LocationResult) {
                     fusedLocationClient.removeLocationUpdates(this)
-                    continuation.resume(result.lastLocation)
+                    val location = result.lastLocation
+                    if (continuation.isActive) continuation.resume(location)
                 }
             }
 
@@ -40,11 +47,25 @@ class LocationHelper(private val context: Context) {
                 Looper.getMainLooper()
             )
 
+            // Step 2: Also try lastLocation in parallel as a fast fallback
+            fusedLocationClient.lastLocation
+                .addOnSuccessListener { lastLocation ->
+                    if (lastLocation != null && continuation.isActive) {
+                        // Got cached location — use it immediately, cancel the update request
+                        fusedLocationClient.removeLocationUpdates(locationCallback)
+                        continuation.resume(lastLocation)
+                    }
+                    // If null, the requestLocationUpdates callback above will handle it
+                }
+
             continuation.invokeOnCancellation {
                 fusedLocationClient.removeLocationUpdates(locationCallback)
             }
+
         } catch (e: SecurityException) {
-            continuation.resume(null)
+            if (continuation.isActive) continuation.resume(null)
+        } catch (e: Exception) {
+            if (continuation.isActive) continuation.resume(null)
         }
     }
 
