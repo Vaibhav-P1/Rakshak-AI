@@ -226,6 +226,46 @@ public final class EmergencyContactDao_Impl implements EmergencyContactDao {
   }
 
   @Override
+  public Object getAllContactsList(final Continuation<? super List<EmergencyContact>> $completion) {
+    final String _sql = "SELECT * FROM emergency_contacts ORDER BY isPrimary DESC, name ASC";
+    final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 0);
+    final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
+    return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<List<EmergencyContact>>() {
+      @Override
+      @NonNull
+      public List<EmergencyContact> call() throws Exception {
+        final Cursor _cursor = DBUtil.query(__db, _statement, false, null);
+        try {
+          final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
+          final int _cursorIndexOfName = CursorUtil.getColumnIndexOrThrow(_cursor, "name");
+          final int _cursorIndexOfPhoneNumber = CursorUtil.getColumnIndexOrThrow(_cursor, "phoneNumber");
+          final int _cursorIndexOfIsPrimary = CursorUtil.getColumnIndexOrThrow(_cursor, "isPrimary");
+          final List<EmergencyContact> _result = new ArrayList<EmergencyContact>(_cursor.getCount());
+          while (_cursor.moveToNext()) {
+            final EmergencyContact _item;
+            final int _tmpId;
+            _tmpId = _cursor.getInt(_cursorIndexOfId);
+            final String _tmpName;
+            _tmpName = _cursor.getString(_cursorIndexOfName);
+            final String _tmpPhoneNumber;
+            _tmpPhoneNumber = _cursor.getString(_cursorIndexOfPhoneNumber);
+            final boolean _tmpIsPrimary;
+            final int _tmp;
+            _tmp = _cursor.getInt(_cursorIndexOfIsPrimary);
+            _tmpIsPrimary = _tmp != 0;
+            _item = new EmergencyContact(_tmpId,_tmpName,_tmpPhoneNumber,_tmpIsPrimary);
+            _result.add(_item);
+          }
+          return _result;
+        } finally {
+          _cursor.close();
+          _statement.release();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
   public Object getContactById(final int id,
       final Continuation<? super EmergencyContact> $completion) {
     final String _sql = "SELECT * FROM emergency_contacts WHERE id = ?";

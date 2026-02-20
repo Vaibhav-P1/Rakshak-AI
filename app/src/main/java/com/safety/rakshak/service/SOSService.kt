@@ -6,9 +6,13 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.safety.rakshak.MainActivity
 import com.safety.rakshak.R
 import com.safety.rakshak.data.RakshakDatabase
@@ -18,15 +22,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SOSService : Service() {
 
-    private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
+    private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private lateinit var locationHelper: LocationHelper
     private lateinit var smsHelper: SMSHelper
     private lateinit var database: RakshakDatabase
 
     companion object {
+        private const val TAG = "SOSService"
         private const val NOTIFICATION_ID = 2001
         private const val CHANNEL_ID = "sos_channel"
         const val ACTION_TRIGGER_SOS = "TRIGGER_SOS"
@@ -48,23 +54,60 @@ class SOSService : Service() {
     }
 
     private fun triggerSOS() {
-        val notification = createNotification(
-            "SOS Triggered",
-            "Sending emergency alerts..."
-        )
-        startForeground(NOTIFICATION_ID, notification)
+        // Fix 3: Check location permission before attempting to start foreground
+        if (ContextCompat.checkSelfPermission(
+                this, android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.e(TAG, "Location permission not granted, cannot start SOS service")
+            stopSelf()
+            return
+        }
 
+        // Fix 1 & 2: Specify foreground service type and handle exceptions gracefully
+        try {
+            val notification = createNotification(
+                "SOS Triggered",
+                "Sending emergency alerts..."
+            )
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+
+        } catch (e: Exception) {
+            // App was in background or permission denied at OS level — stop gracefully
+            Log.e(TAG, "startForeground failed: ${e.message}")
+            stopSelf()
+            return
+        }
+
+        // Send SOS alerts
         serviceScope.launch {
             try {
-                // Get current location
-                val location = locationHelper.getCurrentLocation()
-                
                 // Get emergency contacts
-                val contacts = database.emergencyContactDao().getAllContacts()
-                var contactsList = emptyList<com.safety.rakshak.data.EmergencyContact>()
-                
-                contacts.collect { list ->
-                    contactsList = list
+                val contactsList = withContext(Dispatchers.IO) {
+                    database.emergencyContactDao().getAllContactsList()
+                }
+
+                if (contactsList.isEmpty()) {
+                    updateNotification(
+                        "SOS Error",
+                        "No emergency contacts found. Please add contacts first."
+                    )
+                    stopSelfAfterDelay()
+                    return@launch
+                }
+
+                // Get current location
+                val location = withContext(Dispatchers.IO) {
+                    locationHelper.getCurrentLocation()
                 }
 
                 // Send SMS alerts
@@ -88,9 +131,11 @@ class SOSService : Service() {
                     }
                 )
             } catch (e: Exception) {
+                Log.e(TAG, "SOS coroutine failed: ${e.message}")
+                e.printStackTrace()
                 updateNotification(
                     "SOS Error",
-                    "Failed to send emergency alerts: ${e.message}"
+                    "Failed: ${e.message}"
                 )
                 stopSelfAfterDelay()
             }
@@ -99,15 +144,23 @@ class SOSService : Service() {
 
     private fun stopSelfAfterDelay() {
         android.os.Handler(mainLooper).postDelayed({
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
+            try {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }, 5000)
     }
 
     private fun updateNotification(title: String, content: String) {
-        val notification = createNotification(title, content)
-        val notificationManager = getSystemService(NotificationManager::class.java)
-        notificationManager.notify(NOTIFICATION_ID, notification)
+        try {
+            val notification = createNotification(title, content)
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.notify(NOTIFICATION_ID, notification)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun createNotification(title: String, content: String): Notification {
@@ -142,4 +195,13 @@ class SOSService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            serviceScope.coroutineContext[Job]?.cancel()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 }

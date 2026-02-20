@@ -8,6 +8,9 @@ interface EmergencyContactDao {
     @Query("SELECT * FROM emergency_contacts ORDER BY isPrimary DESC, name ASC")
     fun getAllContacts(): Flow<List<EmergencyContact>>
 
+    @Query("SELECT * FROM emergency_contacts ORDER BY isPrimary DESC, name ASC")
+    suspend fun getAllContactsList(): List<EmergencyContact>
+
     @Query("SELECT * FROM emergency_contacts WHERE id = :id")
     suspend fun getContactById(id: Int): EmergencyContact?
 
