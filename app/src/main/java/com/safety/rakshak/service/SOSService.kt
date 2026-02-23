@@ -9,9 +9,12 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.safety.rakshak.MainActivity
 import com.safety.rakshak.R
@@ -28,35 +31,37 @@ import kotlinx.coroutines.withTimeoutOrNull
 class SOSService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
+    private val mainHandler  = Handler(Looper.getMainLooper())
     private lateinit var locationHelper: LocationHelper
     private lateinit var smsHelper: SMSHelper
     private lateinit var database: RakshakDatabase
+    private lateinit var notificationManager: NotificationManager
 
     companion object {
-        private const val TAG = "SOSService"
-        private const val NOTIFICATION_ID = 2001
-        private const val CHANNEL_ID = "sos_channel"
-        const val ACTION_TRIGGER_SOS = "TRIGGER_SOS"
-        private const val LOCATION_TIMEOUT_MS = 10_000L // 10 seconds max wait for location
+        private const val TAG                 = "SOSService"
+        private const val NOTIFICATION_ID     = 2001
+        private const val CHANNEL_ID          = "sos_channel"
+        private const val LOCATION_TIMEOUT_MS = 10_000L
+        private const val STOP_DELAY_MS       = 4_000L
+        const val ACTION_TRIGGER_SOS          = "TRIGGER_SOS"
     }
 
     override fun onCreate() {
         super.onCreate()
+        notificationManager = getSystemService(NotificationManager::class.java)
         createNotificationChannel()
         locationHelper = LocationHelper(this)
-        smsHelper = SMSHelper(this)
-        database = RakshakDatabase.getDatabase(this)
+        smsHelper      = SMSHelper(this)
+        database       = RakshakDatabase.getDatabase(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ACTION_TRIGGER_SOS -> triggerSOS()
-        }
+        if (intent?.action == ACTION_TRIGGER_SOS) triggerSOS()
         return START_NOT_STICKY
     }
 
     private fun triggerSOS() {
-        // Check location permission before starting foreground
+        // 1. Check location permission
         if (ContextCompat.checkSelfPermission(
                 this, android.Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
@@ -66,12 +71,20 @@ class SOSService : Service() {
             return
         }
 
-        // Start foreground with correct type
+        // 2. Check notification permission (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this, android.Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                Log.e(TAG, "POST_NOTIFICATIONS not granted — notifications will not show")
+                // Don't stop — still send the SMS, just no notification
+            }
+        }
+
+        // 3. Start foreground — required before any async work
         try {
-            val notification = createNotification(
-                "SOS Triggered",
-                "Sending emergency alerts..."
-            )
+            val notification = buildNotification("SOS Triggered", "Sending emergency alerts...")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 startForeground(
                     NOTIFICATION_ID,
@@ -81,99 +94,86 @@ class SOSService : Service() {
             } else {
                 startForeground(NOTIFICATION_ID, notification)
             }
+            Log.d(TAG, "Foreground service started")
         } catch (e: Exception) {
             Log.e(TAG, "startForeground failed: ${e.message}")
             stopSelf()
             return
         }
 
+        // 4. Run SOS flow
         serviceScope.launch {
             try {
-                // Get emergency contacts
                 val contactsList = withContext(Dispatchers.IO) {
                     database.emergencyContactDao().getAllContactsList()
                 }
 
                 if (contactsList.isEmpty()) {
-                    updateNotification("SOS Error", "No emergency contacts found. Please add contacts first.")
-                    stopSelfAfterDelay()
+                    Log.w(TAG, "No contacts found")
+                    showNotification("SOS Error", "No emergency contacts found")
+                    scheduleStop()
                     return@launch
                 }
 
-                Log.d(TAG, "Found ${contactsList.size} contacts, getting location...")
-                updateNotification("SOS Triggered", "Getting your location...")
+                showNotification("SOS Triggered", "Getting your location...")
+                Log.d(TAG, "Getting location for ${contactsList.size} contacts")
 
-                // Add 10 second timeout — if location takes too long, send SMS without it
                 val location = withTimeoutOrNull(LOCATION_TIMEOUT_MS) {
-                    withContext(Dispatchers.IO) {
-                        locationHelper.getCurrentLocation()
-                    }
+                    withContext(Dispatchers.IO) { locationHelper.getCurrentLocation() }
                 }
 
-                if (location == null) {
-                    Log.w(TAG, "Location timed out or unavailable — sending SOS without location")
-                    updateNotification("SOS Triggered", "Sending alerts (location unavailable)...")
-                } else {
-                    Log.d(TAG, "Location obtained: ${location.latitude}, ${location.longitude}")
-                }
-
-                // Send SMS alerts
-                updateNotification("SOS Triggered", "Sending SMS to ${contactsList.size} contacts...")
+                Log.d(TAG, if (location != null) "Location: ${location.latitude},${location.longitude}" else "Location unavailable")
+                showNotification("SOS Triggered", "Sending SMS to ${contactsList.size} contact${if (contactsList.size > 1) "s" else ""}...")
 
                 smsHelper.sendSOSMessage(
-                    contacts = contactsList,
-                    latitude = location?.latitude,
+                    contacts  = contactsList,
+                    latitude  = location?.latitude,
                     longitude = location?.longitude,
                     onSuccess = {
-                        Log.d(TAG, "SOS SMS sent successfully")
-                        updateNotification(
-                            "SOS Sent ✅",
-                            "Emergency alerts sent to ${contactsList.size} contacts"
-                        )
-                        stopSelfAfterDelay()
+                        Log.d(TAG, "SMS sent successfully")
+                        mainHandler.post {
+                            showNotification(
+                                "Alert Sent",
+                                "Emergency SMS sent to ${contactsList.size} contact${if (contactsList.size > 1) "s" else ""}"
+                            )
+                            scheduleStop()
+                        }
                     },
                     onError = { error ->
-                        Log.e(TAG, "SOS SMS error: $error")
-                        updateNotification("SOS Error ❌", error)
-                        stopSelfAfterDelay()
+                        Log.e(TAG, "SMS error: $error")
+                        mainHandler.post {
+                            showNotification("SOS Failed", error)
+                            scheduleStop()
+                        }
                     }
                 )
 
             } catch (e: Exception) {
-                Log.e(TAG, "SOS coroutine failed: ${e.message}")
-                e.printStackTrace()
-                updateNotification("SOS Error ❌", "Failed: ${e.message}")
-                stopSelfAfterDelay()
+                Log.e(TAG, "SOS coroutine error: ${e.message}")
+                mainHandler.post {
+                    showNotification("SOS Failed", "Something went wrong")
+                    scheduleStop()
+                }
             }
         }
     }
 
-    private fun stopSelfAfterDelay() {
-        android.os.Handler(mainLooper).postDelayed({
-            try {
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }, 5000)
-    }
-
-    private fun updateNotification(title: String, content: String) {
+    private fun showNotification(title: String, content: String) {
         try {
-            val notification = createNotification(title, content)
-            val notificationManager = getSystemService(NotificationManager::class.java)
-            notificationManager.notify(NOTIFICATION_ID, notification)
+            Log.d(TAG, "Notification: $title — $content")
+            notificationManager.notify(NOTIFICATION_ID, buildNotification(title, content))
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "showNotification failed: ${e.message}")
         }
     }
 
-    private fun createNotification(title: String, content: String): Notification {
-        val notificationIntent = Intent(this, MainActivity::class.java)
+    private fun buildNotification(title: String, content: String): Notification {
         val pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent,
-            PendingIntent.FLAG_IMMUTABLE
+            this, 0,
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
@@ -182,6 +182,8 @@ class SOSService : Service() {
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
             .setAutoCancel(false)
             .build()
     }
@@ -193,21 +195,30 @@ class SOSService : Service() {
                 "SOS Alerts",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notifications for SOS emergency alerts"
+                description = "Emergency SOS alert notifications"
             }
-            val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)
+            Log.d(TAG, "Notification channel created: $CHANNEL_ID")
         }
+    }
+
+    private fun scheduleStop() {
+        mainHandler.postDelayed({
+            try {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+                Log.d(TAG, "Service stopped")
+            } catch (e: Exception) {
+                Log.e(TAG, "scheduleStop error: ${e.message}")
+            }
+        }, STOP_DELAY_MS)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
         super.onDestroy()
-        try {
-            serviceScope.coroutineContext[Job]?.cancel()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        mainHandler.removeCallbacksAndMessages(null)
+        try { serviceScope.coroutineContext[Job]?.cancel() } catch (e: Exception) { }
     }
 }
