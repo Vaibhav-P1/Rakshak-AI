@@ -6,4 +6,5 @@
     <string name="add_contact">Add Contact</string>
     <string name="trigger_sos">Trigger SOS Alert</string>
     <string name="listening">Listening for \'Help Rakshak\'</string>
+    <string name="accessibility_service_description">Allows Rakshak to detect Volume Up + Down pressed together to trigger SOS emergency alert</string>
 </resources>

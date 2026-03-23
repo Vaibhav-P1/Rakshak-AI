@@ -12,22 +12,26 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
-    
+
     private val repository: EmergencyContactRepository
-    
+
     private val _contacts = MutableStateFlow<List<EmergencyContact>>(emptyList())
     val contacts: StateFlow<List<EmergencyContact>> = _contacts.asStateFlow()
-    
+
     private val _isVoiceGuardActive = MutableStateFlow(false)
     val isVoiceGuardActive: StateFlow<Boolean> = _isVoiceGuardActive.asStateFlow()
-    
+
+    // ── Shake Guard state ─────────────────────────────────────────
+    private val _isShakeActive = MutableStateFlow(false)
+    val isShakeActive: StateFlow<Boolean> = _isShakeActive.asStateFlow()
+
     private val _sosTriggered = MutableStateFlow(false)
     val sosTriggered: StateFlow<Boolean> = _sosTriggered.asStateFlow()
 
     init {
         val database = RakshakDatabase.getDatabase(application)
         repository = EmergencyContactRepository(database.emergencyContactDao())
-        
+
         viewModelScope.launch {
             repository.allContacts.collect { contactList ->
                 _contacts.value = contactList
@@ -37,12 +41,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addContact(name: String, phoneNumber: String, isPrimary: Boolean = false) {
         viewModelScope.launch {
-            val contact = EmergencyContact(
-                name = name,
-                phoneNumber = phoneNumber,
-                isPrimary = isPrimary
+            repository.insertContact(
+                EmergencyContact(
+                    name = name,
+                    phoneNumber = phoneNumber,
+                    isPrimary = isPrimary
+                )
             )
-            repository.insertContact(contact)
         }
     }
 
@@ -60,6 +65,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setVoiceGuardActive(active: Boolean) {
         _isVoiceGuardActive.value = active
+    }
+
+    fun setShakeActive(active: Boolean) {
+        _isShakeActive.value = active
     }
 
     fun triggerSOS() {
