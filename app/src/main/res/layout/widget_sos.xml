@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@drawable/widget_background"
+    android:padding="16dp">
+
+    <!-- App name -->
+    <TextView
+        android:id="@+id/widget_app_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="RAKSHAK"
+        android:textColor="#F0F2F8"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.15"
+        android:alpha="0.5"
+        android:layout_marginBottom="10dp" />
+
+    <!-- SOS Button -->
+    <Button
+        android:id="@+id/widget_sos_button"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:text="SOS"
+        android:textColor="#FFFFFF"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.15"
+        android:background="@drawable/widget_sos_button_bg"
+        android:layout_marginBottom="10dp" />
+
+    <!-- Contact count -->
+    <TextView
+        android:id="@+id/widget_contact_count"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Loading contacts..."
+        android:textColor="#6B7280"
+        android:textSize="12sp"
+        android:gravity="center" />
+
+</LinearLayout>

@@ -72,6 +72,20 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <!-- SOS Widget -->
+        <receiver
+            android:name=".widget.SOSWidget"
+            android:exported="true"
+            android:label="Rakshak SOS">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.safety.rakshak.WIDGET_SOS" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sos_widget_info" />
+        </receiver>
+
     </application>
 
 </manifest>
