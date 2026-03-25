@@ -79,6 +79,8 @@
                                             <option name="values">
                                               <map>
                                                 <entry key="color" value="000000" />
+                                                <entry key="imagePath" value="E:\App Icon\Rakshak_icon.png" />
+                                                <entry key="scalingPercent" value="101" />
                                               </map>
                                             </option>
                                           </PersistentState>
