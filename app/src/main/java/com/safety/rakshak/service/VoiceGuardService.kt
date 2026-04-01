@@ -26,6 +26,7 @@ class VoiceGuardService : Service() {
     private var speechRecognizer: SpeechRecognizer? = null
     private var isListening  = false
     private var isActive     = false
+    private var sosCooldown  = false  // prevents double trigger
     private var wakeLock: PowerManager.WakeLock? = null
     private var screenWakeLock: PowerManager.WakeLock? = null
     private val mainHandler  = Handler(Looper.getMainLooper())
@@ -43,6 +44,7 @@ class VoiceGuardService : Service() {
         const val ACTION_START_VOICE_GUARD = "START_VOICE_GUARD"
         const val ACTION_STOP_VOICE_GUARD  = "STOP_VOICE_GUARD"
         const val ACTION_TRIGGER_SOS       = "TRIGGER_SOS"
+        private const val SOS_COOLDOWN_MS  = 10_000L // 10s before next trigger allowed
     }
 
     override fun onCreate() {
@@ -64,28 +66,16 @@ class VoiceGuardService : Service() {
     private fun acquireWakeLocks() {
         try {
             val pm = getSystemService(PowerManager::class.java)
-
-            // PARTIAL_WAKE_LOCK — keeps CPU on, screen can be off
             wakeLock = pm.newWakeLock(
                 PowerManager.PARTIAL_WAKE_LOCK,
                 "Rakshak::VoiceGuardCPU"
-            ).apply {
-                setReferenceCounted(false)
-                acquire(60 * 60 * 1000L)
-            }
+            ).apply { setReferenceCounted(false); acquire(60 * 60 * 1000L) }
 
-            // SCREEN_DIM_WAKE_LOCK — keeps screen just barely alive
-            // so SpeechRecognizer can receive audio on lock screen
             @Suppress("DEPRECATION")
             screenWakeLock = pm.newWakeLock(
                 PowerManager.SCREEN_DIM_WAKE_LOCK or PowerManager.ON_AFTER_RELEASE,
                 "Rakshak::VoiceGuardScreen"
-            ).apply {
-                setReferenceCounted(false)
-                acquire(60 * 60 * 1000L)
-            }
-
-            Log.d(TAG, "WakeLocks acquired")
+            ).apply { setReferenceCounted(false); acquire(60 * 60 * 1000L) }
         } catch (e: Exception) {
             Log.e(TAG, "WakeLock failed: ${e.message}")
         }
@@ -95,18 +85,15 @@ class VoiceGuardService : Service() {
         try {
             if (wakeLock?.isHeld == true) wakeLock?.release()
             if (screenWakeLock?.isHeld == true) screenWakeLock?.release()
-        } catch (e: Exception) {
-            Log.e(TAG, "WakeLock release: ${e.message}")
-        }
+        } catch (e: Exception) { }
     }
 
-    // ── Voice Guard ───────────────────────────────────────────────
+    // ── Voice Guard lifecycle ─────────────────────────────────────
     private fun startVoiceGuard() {
         isActive = true
-        startForeground(
-            NOTIFICATION_ID,
-            createNotification("Voice Guard Active", "Listening for 'Help Rakshak'...")
-        )
+        startForeground(NOTIFICATION_ID, createNotification(
+            "Voice Guard Active", "Listening for 'Help Rakshak'..."
+        ))
         initRecognizer()
         startListening()
     }
@@ -135,31 +122,16 @@ class VoiceGuardService : Service() {
 
         mainHandler.post {
             try {
-                // Suppress beep by muting for 200ms
-                audioManager.adjustStreamVolume(
-                    AudioManager.STREAM_MUSIC,
-                    AudioManager.ADJUST_MUTE, 0
-                )
-                mainHandler.postDelayed({
-                    audioManager.adjustStreamVolume(
-                        AudioManager.STREAM_MUSIC,
-                        AudioManager.ADJUST_UNMUTE, 0
-                    )
-                }, 200)
-
                 val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                     putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                         RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                     putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                     putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
                     putExtra("android.speech.extra.EXTRA_CALLING_PACKAGE", packageName)
-                    // Long silence window keeps session alive longer
-                    // reducing restart frequency = fewer beeps
                     putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 6000L)
                     putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 6000L)
                     putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 300L)
                 }
-
                 speechRecognizer?.startListening(intent)
                 isListening = true
                 Log.d(TAG, "Listening started")
@@ -177,9 +149,19 @@ class VoiceGuardService : Service() {
             speechRecognizer?.cancel()
             speechRecognizer?.destroy()
             speechRecognizer = null
-        } catch (e: Exception) {
-            Log.e(TAG, "stopListening: ${e.message}")
-        }
+        } catch (e: Exception) { }
+    }
+
+    // Only mute once at service start — not on every restart
+    private fun muteStartupBeep() {
+        try {
+            audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
+                AudioManager.ADJUST_MUTE, 0)
+            mainHandler.postDelayed({
+                try { audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
+                    AudioManager.ADJUST_UNMUTE, 0) } catch (e: Exception) { }
+            }, 300)
+        } catch (e: Exception) { }
     }
 
     private fun scheduleRestart(delayMs: Long = 1000L) {
@@ -192,13 +174,10 @@ class VoiceGuardService : Service() {
         }, delayMs)
     }
 
-    // ── Listener ──────────────────────────────────────────────────
+    // ── Recognition listener ──────────────────────────────────────
     private val recognitionListener = object : RecognitionListener {
 
-        override fun onReadyForSpeech(params: Bundle?) {
-            isListening = true
-        }
-
+        override fun onReadyForSpeech(params: Bundle?) { isListening = true }
         override fun onBeginningOfSpeech() {}
         override fun onRmsChanged(rmsdB: Float) {}
         override fun onBufferReceived(buffer: ByteArray?) {}
@@ -207,16 +186,13 @@ class VoiceGuardService : Service() {
         override fun onError(error: Int) {
             isListening = false
             if (!isActive) return
-
             val delay = when (error) {
                 SpeechRecognizer.ERROR_NETWORK,
                 SpeechRecognizer.ERROR_NETWORK_TIMEOUT,
-                SpeechRecognizer.ERROR_SERVER          -> 5000L
-                SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> 3000L
+                SpeechRecognizer.ERROR_SERVER            -> 5000L
+                SpeechRecognizer.ERROR_RECOGNIZER_BUSY   -> 3000L
                 SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> {
-                    Log.e(TAG, "Microphone permission denied")
-                    stopVoiceGuard()
-                    return
+                    stopVoiceGuard(); return
                 }
                 else -> 1000L
             }
@@ -228,24 +204,42 @@ class VoiceGuardService : Service() {
             isListening = false
             val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
             Log.d(TAG, "Results: $matches")
-            if (!checkForWakeWord(matches) && isActive) {
-                // Reuse same recognizer — no destroy/recreate = no beep
-                startListening()
+
+            val wakeWordFound = checkForWakeWord(matches)
+
+            // Fix 1: Always restart listening after results
+            // whether wake word was found or not
+            // This is what allows 2nd, 3rd trigger to work
+            if (isActive) {
+                if (wakeWordFound) {
+                    // Restart after cooldown so SOS can trigger again
+                    scheduleRestart(SOS_COOLDOWN_MS)
+                } else {
+                    // No wake word — restart immediately reusing same recognizer
+                    startListening()
+                }
             }
         }
 
         override fun onPartialResults(partialResults: Bundle?) {
             val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-            if (checkForWakeWord(matches)) speechRecognizer?.cancel()
+            if (checkForWakeWord(matches)) {
+                // Cancel current session — onError will restart
+                speechRecognizer?.cancel()
+            }
         }
 
         override fun onEvent(eventType: Int, params: Bundle?) {}
     }
 
     private fun checkForWakeWord(matches: ArrayList<String>?): Boolean {
+        if (sosCooldown) return false  // prevent double trigger
         matches?.forEach { result ->
             if (WAKE_WORDS.any { result.lowercase().trim().contains(it) }) {
                 Log.d(TAG, "Wake word detected: $result")
+                sosCooldown = true
+                // Reset cooldown after SOS_COOLDOWN_MS
+                mainHandler.postDelayed({ sosCooldown = false }, SOS_COOLDOWN_MS)
                 triggerSOS()
                 return true
             }
@@ -253,8 +247,8 @@ class VoiceGuardService : Service() {
         return false
     }
 
-    // ── SOS ───────────────────────────────────────────────────────
     private fun triggerSOS() {
+        Log.d(TAG, "Triggering SOS from VoiceGuard")
         sendBroadcast(Intent(ACTION_TRIGGER_SOS))
         val serviceIntent = Intent(this, SOSService::class.java).apply {
             action = SOSService.ACTION_TRIGGER_SOS
@@ -268,8 +262,7 @@ class VoiceGuardService : Service() {
     // ── Notification ──────────────────────────────────────────────
     private fun createNotification(title: String, content: String): Notification {
         val pendingIntent = PendingIntent.getActivity(
-            this, 0,
-            Intent(this, MainActivity::class.java),
+            this, 0, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
@@ -285,12 +278,9 @@ class VoiceGuardService : Service() {
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Voice Guard Service",
+                CHANNEL_ID, "Voice Guard Service",
                 NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Keeps Voice Guard running in background"
-            }
+            ).apply { description = "Keeps Voice Guard running in background" }
             getSystemService(NotificationManager::class.java)
                 .createNotificationChannel(channel)
         }
@@ -302,12 +292,8 @@ class VoiceGuardService : Service() {
         super.onDestroy()
         isActive = false
         mainHandler.removeCallbacksAndMessages(null)
-        try {
-            audioManager.adjustStreamVolume(
-                AudioManager.STREAM_MUSIC,
-                AudioManager.ADJUST_UNMUTE, 0
-            )
-        } catch (e: Exception) { }
+        try { audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
+            AudioManager.ADJUST_UNMUTE, 0) } catch (e: Exception) { }
         stopListening()
         releaseWakeLocks()
     }

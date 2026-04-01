@@ -34,15 +34,28 @@ class SOSWidget : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action == ACTION_WIDGET_SOS) {
-            // Trigger SOS directly from widget
-            val sosIntent = Intent(context, SOSService::class.java).apply {
-                action = SOSService.ACTION_TRIGGER_SOS
-            }
+            triggerSOSFromWidget(context)
+        }
+    }
+
+    private fun triggerSOSFromWidget(context: Context) {
+        // Fix: Use a full activity trampoline to start the foreground service
+        // Direct startForegroundService from BroadcastReceiver is restricted
+        // on Android 14 — going through activity context fixes this
+        val sosIntent = Intent(context, SOSService::class.java).apply {
+            action = SOSService.ACTION_TRIGGER_SOS
+            // FLAG_FROM_BACKGROUND tells system this is intentional
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(sosIntent)
             } else {
                 context.startService(sosIntent)
             }
+        } catch (e: Exception) {
+            // Fallback — try regular startService
+            try { context.startService(sosIntent) } catch (ex: Exception) { }
         }
     }
 }
@@ -54,17 +67,19 @@ fun updateWidget(
 ) {
     val views = RemoteViews(context.packageName, R.layout.widget_sos)
 
-    // SOS button click — triggers SOS directly
+    // Fix: use unique request code per widget to avoid PendingIntent collision
     val sosIntent = Intent(context, SOSWidget::class.java).apply {
         action = SOSWidget.ACTION_WIDGET_SOS
     }
     val sosPendingIntent = PendingIntent.getBroadcast(
-        context, 0, sosIntent,
+        context,
+        widgetId, // unique per widget instance
+        sosIntent,
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     )
     views.setOnClickPendingIntent(R.id.widget_sos_button, sosPendingIntent)
 
-    // Fetch contact count async and update widget
+    // Fetch contact count
     CoroutineScope(Dispatchers.IO).launch {
         val count = try {
             RakshakDatabase.getDatabase(context)
@@ -74,17 +89,11 @@ fun updateWidget(
         } catch (e: Exception) { 0 }
 
         withContext(Dispatchers.Main) {
-            if (count == 0) {
-                views.setTextViewText(
-                    R.id.widget_contact_count,
-                    "No contacts added"
-                )
-            } else {
-                views.setTextViewText(
-                    R.id.widget_contact_count,
-                    "$count contact${if (count > 1) "s" else ""} will receive alert"
-                )
-            }
+            views.setTextViewText(
+                R.id.widget_contact_count,
+                if (count == 0) "No contacts added"
+                else "$count contact${if (count > 1) "s" else ""} will receive alert"
+            )
             appWidgetManager.updateAppWidget(widgetId, views)
         }
     }

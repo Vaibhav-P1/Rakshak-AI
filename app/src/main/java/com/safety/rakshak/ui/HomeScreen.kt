@@ -1,5 +1,6 @@
 package com.safety.rakshak.ui
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -61,7 +62,6 @@ fun HomeScreen(
     var isBatteryOptimized by remember { mutableStateOf(false) }
     var isAccessibilityOn  by remember { mutableStateOf(false) }
 
-    // ── Check battery + accessibility state ───────────────────────
     val checkStates = {
         val pm = context.getSystemService(PowerManager::class.java)
         isBatteryOptimized = !pm.isIgnoringBatteryOptimizations(context.packageName)
@@ -78,7 +78,7 @@ fun HomeScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // ── Pulse rings ───────────────────────────────────────────────
+    // Pulse rings
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val ring1Scale by infiniteTransition.animateFloat(
         initialValue = 1f, targetValue = 1.35f,
@@ -101,16 +101,16 @@ fun HomeScreen(
         label = "r2a"
     )
 
-    // ── SOS Countdown dialog ──────────────────────────────────────
+    // SOS Countdown dialog
     if (showSOSDialog) {
         LaunchedEffect(sosCountdown) {
             if (sosCountdown > 0) {
                 kotlinx.coroutines.delay(1000)
                 sosCountdown--
             } else {
-                triggerSOS(context)
                 showSOSDialog = false
                 sosCountdown = 3
+                triggerSOS(context)
             }
         }
 
@@ -140,7 +140,11 @@ fun HomeScreen(
             },
             confirmButton = {
                 Button(
-                    onClick = { triggerSOS(context); showSOSDialog = false; sosCountdown = 3 },
+                    onClick = {
+                        showSOSDialog = false
+                        sosCountdown = 3
+                        triggerSOS(context)
+                    },
                     colors  = ButtonDefaults.buttonColors(containerColor = SOSRed),
                     shape   = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
@@ -155,17 +159,14 @@ fun HomeScreen(
         )
     }
 
-    // ── Screen ────────────────────────────────────────────────────
     Box(modifier = Modifier.fillMaxSize().background(BgDark)) {
         Column(
             modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             // Top bar
             Row(
-                modifier = Modifier.fillMaxWidth()
-                    .padding(top = 56.dp, bottom = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 56.dp, bottom = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment     = Alignment.CenterVertically
             ) {
@@ -180,13 +181,13 @@ fun HomeScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            // ── Battery optimization warning ──────────────────────
+            // Battery optimization warning
             if (isBatteryOptimized && isVoiceActive) {
                 WarningBanner(
-                    icon    = Icons.Default.BatteryAlert,
+                    icon = Icons.Default.BatteryAlert,
                     message = "Disable battery optimization\nfor background detection",
                     buttonText = "Fix",
-                    color   = AccentOrange,
+                    color = AccentOrange,
                     onClick = {
                         context.startActivity(Intent(
                             Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
@@ -197,7 +198,7 @@ fun HomeScreen(
                 Spacer(Modifier.height(10.dp))
             }
 
-            // ── Accessibility warning ─────────────────────────────
+            // Accessibility warning
             if (!isAccessibilityOn) {
                 WarningBanner(
                     icon       = Icons.Default.VolumeUp,
@@ -205,15 +206,13 @@ fun HomeScreen(
                     buttonText = "Enable",
                     color      = AccentGreen,
                     onClick    = {
-                        context.startActivity(
-                            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                        )
+                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     }
                 )
                 Spacer(Modifier.height(10.dp))
             }
 
-            // ── Voice Guard card ──────────────────────────────────
+            // Voice Guard card
             GuardToggleCard(
                 icon     = Icons.Default.Mic,
                 title    = "Voice Guard",
@@ -234,20 +233,16 @@ fun HomeScreen(
 
             Spacer(Modifier.height(10.dp))
 
-            // ── Volume Guard card (status only — no toggle needed) ─
-            // Accessibility service runs system-wide once enabled
-            // No need to start/stop a service — it's always active
+            // Volume Guard card
             GuardStatusCard(
-                icon      = Icons.Default.VolumeUp,
-                title     = "Volume Guard",
-                subtitle  = if (isAccessibilityOn)
-                    "Press Vol Up + Down to trigger SOS"
-                else
-                    "Enable accessibility service to activate",
-                isActive  = isAccessibilityOn
+                icon     = Icons.Default.VolumeUp,
+                title    = "Volume Guard",
+                subtitle = if (isAccessibilityOn) "Press Vol Up + Down to trigger SOS"
+                else "Enable accessibility service to activate",
+                isActive = isAccessibilityOn
             )
 
-            // ── SOS Button area ───────────────────────────────────
+            // SOS Button
             Box(
                 contentAlignment = Alignment.Center,
                 modifier         = Modifier.weight(1f).fillMaxWidth()
@@ -284,8 +279,7 @@ fun HomeScreen(
                         } else {
                             Text("SOS", fontSize = 52.sp, fontWeight = FontWeight.Black,
                                 color = Color.White, letterSpacing = 4.sp)
-                            Text("TAP TO SEND", fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium,
+                            Text("TAP TO SEND", fontSize = 10.sp, fontWeight = FontWeight.Medium,
                                 color = Color.White.copy(alpha = 0.7f), letterSpacing = 2.sp)
                         }
                     }
@@ -353,7 +347,8 @@ fun HomeScreen(
                         }
                         if (contacts.size > 3) {
                             Text("+${contacts.size - 3} more", color = TextSecondary,
-                                fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp, start = 40.dp))
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(top = 4.dp, start = 40.dp))
                         }
                     }
                 }
@@ -362,10 +357,9 @@ fun HomeScreen(
     }
 }
 
-// ── Warning banner ────────────────────────────────────────────────
 @Composable
 private fun WarningBanner(
-    icon       : androidx.compose.ui.graphics.vector.ImageVector,
+    icon       : ImageVector,
     message    : String,
     buttonText : String,
     color      : Color,
@@ -385,17 +379,14 @@ private fun WarningBanner(
                     fontWeight = FontWeight.Medium, lineHeight = 16.sp)
             }
             Spacer(Modifier.width(8.dp))
-            TextButton(
-                onClick = onClick,
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-            ) {
+            TextButton(onClick = onClick,
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) {
                 Text(buttonText, color = color, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
         }
     }
 }
 
-// ── Guard toggle card (for Voice Guard) ───────────────────────────
 @Composable
 private fun GuardToggleCard(
     icon     : ImageVector,
@@ -438,7 +429,6 @@ private fun GuardToggleCard(
     }
 }
 
-// ── Guard status card (for Volume Guard — no toggle needed) ───────
 @Composable
 private fun GuardStatusCard(
     icon     : ImageVector,
@@ -466,32 +456,23 @@ private fun GuardStatusCard(
                     Text(subtitle, color = if (isActive) AccentGreen else TextSecondary, fontSize = 12.sp)
                 }
             }
-            // Status indicator instead of switch
-            Box(
-                modifier = Modifier.size(10.dp).clip(CircleShape)
-                    .background(if (isActive) AccentGreen else TextMuted)
-            )
+            Box(modifier = Modifier.size(10.dp).clip(CircleShape)
+                .background(if (isActive) AccentGreen else TextMuted))
         }
     }
 }
 
-// ── Check if accessibility service is enabled ─────────────────────
 fun isAccessibilityServiceEnabled(context: android.content.Context): Boolean {
-    val expectedService = "${context.packageName}/${context.packageName}.service.RakshakAccessibilityService"
-    val expectedShort   = "${context.packageName}/.service.RakshakAccessibilityService"
-
-    val enabledServices = Settings.Secure.getString(
+    val expectedFull  = "${context.packageName}/${context.packageName}.service.RakshakAccessibilityService"
+    val expectedShort = "${context.packageName}/.service.RakshakAccessibilityService"
+    val enabled = Settings.Secure.getString(
         context.contentResolver,
         Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
     ) ?: return false
-
-    // Check both full and short package name formats
-    return enabledServices.split(":")
-        .map { it.trim() }
-        .any { service ->
-            service.equals(expectedService, ignoreCase = true) ||
-                    service.equals(expectedShort,   ignoreCase = true)
-        }
+    return enabled.split(":").map { it.trim() }.any { service ->
+        service.equals(expectedFull, ignoreCase = true) ||
+                service.equals(expectedShort, ignoreCase = true)
+    }
 }
 
 private fun triggerSOS(context: android.content.Context) {
