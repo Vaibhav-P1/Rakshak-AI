@@ -1,333 +1,329 @@
-# 🛡️ Rakshak - Women Safety App
+# 🛡️ Rakshak — Women Safety Application
 
-**Rakshak** is a comprehensive safety application designed to provide emergency assistance through multiple activation methods including voice commands, manual SOS button, and location sharing.
+**Rakshak** is a personal safety application for Android that provides emergency SOS alerts through multiple trigger methods, working fully offline without any internet connection or external APIs.
+
+---
 
 ## ✨ Features
 
-### Core Features
-- 🚨 **Emergency SOS Button** - Large, accessible button for instant alerts
-- 🎤 **Voice Activation** - Say "Help Rakshak" to trigger emergency alert hands-free
-- 📍 **Real-time Location Sharing** - Sends GPS coordinates via SMS
-- 👥 **Emergency Contacts Management** - Add up to 5+ trusted contacts
-- 📱 **SMS Alerts** - Sends emergency messages with location to all contacts
-- 🔔 **Foreground Services** - Always active when enabled
-- 🌙 **Dark Mode Support** - Material 3 design with theme support
+### SOS Triggers
+- 🚨 **SOS Button** — Large animated button with 3-second countdown and instant "Send Now" option
+- 🎤 **Voice Guard** — Say "Help Rakshak" hands-free to trigger SOS
+- 🔊 **Volume Guard** — Press Volume Up + Volume Down simultaneously for silent SOS trigger
+- 📲 **Home Screen Widget** — 4x2 widget for one-tap SOS without opening the app
 
-### Technical Features
-- **MVVM Architecture** with Clean Architecture principles
-- **Jetpack Compose** for modern, declarative UI
-- **Room Database** for persistent data storage
-- **Coroutines & Flow** for asynchronous operations
-- **FusedLocationProvider** for accurate GPS location
-- **SpeechRecognizer** for voice command detection
-- **Foreground Services** for reliable background operation
+### Core Functionality
+- 📍 **Live Location Sharing** — Sends Google Maps URL with real-time GPS coordinates via SMS
+- 👥 **Emergency Contacts** — Add contacts manually or pick from phone contacts
+- 🔔 **Smart Notifications** — Progressive notifications through each SOS stage
+- 🌙 **Dark Minimal UI** — Clean dark theme built with Jetpack Compose
+- 🔋 **Battery Optimization Guidance** — In-app banner guides user through device-specific setup
+- ♿ **Accessibility Service Setup** — In-app banner for Volume Guard activation
 
-## 📱 Screenshots
+### Technical Highlights
+- ✅ Fully offline — SMS + GPS, no internet required
+- ✅ Android 14 compliant — proper foreground service types
+- ✅ MVVM architecture with Room + StateFlow + Coroutines
+- ✅ No external APIs or paid services
+- ✅ All data stored locally — no analytics, no tracking
 
-### Home Screen
-- Large red SOS button (animated pulse effect)
-- Voice Guard toggle with status indicator
-- Emergency contacts summary card
+---
 
-### Contacts Screen
-- List of emergency contacts
-- Add contacts manually or from phone contacts
-- Delete contacts with confirmation
+## 📱 Screens
 
-### Permission Screen
-- Clear explanation of required permissions
-- One-tap permission request
+| Screen | Description |
+|--------|-------------|
+| Home Screen | SOS button, Voice Guard toggle, Volume Guard status, emergency contacts summary |
+| Contacts Screen | Add/delete emergency contacts, pick from phone contacts |
+| Permission Screen | Clear permission explanations with one-tap grant |
+
+---
+
+## 📸 Screenshots
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/44e41503-0963-463a-be75-d28cf198af5e" width="250"/>
+  <img src="https://github.com/user-attachments/assets/565d7c6b-0dae-4241-af4b-db86d1c7d0c2" width="250"/>
+  <img src="https://github.com/user-attachments/assets/3fc8e176-b9dc-4e72-861b-3e7360209b1a" width="250"/>
+  <img src="https://github.com/user-attachments/assets/2243aece-d1da-407d-afca-d1fbfe89fed2" width="250"/>
+  <img src="https://github.com/user-attachments/assets/de9e6a52-e771-4347-b916-fa10a1f83720" width="250"/>
+</p>
+
+
+---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Android Studio Hedgehog or later
-- Android SDK 26+ (Android 8.0 Oreo)
-- Kotlin 1.9.20+
-- Gradle 8.2+
+- Android Studio Hedgehog 2023.1.1 or later
+- Android SDK API 34 (Android 14)
+- Kotlin 1.9.x
+- Gradle 8.x
+- JDK 17
 
-### Installation Steps
+### Installation
 
-1. **Clone or Download** the project
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Vaibhav-P1/Rakshak-AI.git
+   ```
+
 2. **Open in Android Studio**
-   - File → Open → Select Rakshak folder
+   ```
+   File → Open → Select Rakshak folder
+   ```
 
 3. **Sync Gradle**
-   - Android Studio will automatically sync
-   - If not, click "Sync Now" in the notification bar
+   Android Studio will sync automatically. If not, click "Sync Now".
 
-4. **Build the Project**
+4. **Build the project**
    ```
-   Build → Make Project (Ctrl+F9)
-   ```
-
-5. **Run on Device/Emulator**
-   ```
-   Run → Run 'app' (Shift+F10)
+   Build → Make Project  (Ctrl+F9)
    ```
 
-### Required Permissions
+5. **Run on device**
+   ```
+   Run → Run 'app'  (Shift+F10)
+   ```
+   > ⚠️ Test on a real device — SMS and GPS do not work on emulator.
 
-The app requests the following permissions:
-- ✅ **Location** (ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION)
-- ✅ **SMS** (SEND_SMS)
-- ✅ **Contacts** (READ_CONTACTS)
-- ✅ **Microphone** (RECORD_AUDIO)
-- ✅ **Notifications** (POST_NOTIFICATIONS - Android 13+)
-- ✅ **Foreground Service** (FOREGROUND_SERVICE, FOREGROUND_SERVICE_MICROPHONE)
+---
+
+## 🔐 Permissions
+
+| Permission | Purpose |
+|------------|---------|
+| ACCESS_FINE_LOCATION | GPS location for SOS alert |
+| ACCESS_COARSE_LOCATION | Network-based location fallback |
+| SEND_SMS | Send emergency alerts to contacts |
+| RECORD_AUDIO | Microphone for Voice Guard |
+| READ_CONTACTS | Pick contacts from phone |
+| FOREGROUND_SERVICE | Run services in background |
+| FOREGROUND_SERVICE_LOCATION | Location foreground service type (Android 14) |
+| FOREGROUND_SERVICE_MICROPHONE | Microphone foreground service type (Android 14) |
+| POST_NOTIFICATIONS | Show SOS notifications (Android 13+) |
+| WAKE_LOCK | Keep CPU alive for background detection |
+| REQUEST_IGNORE_BATTERY_OPTIMIZATIONS | Prevent system from killing services |
+| BIND_ACCESSIBILITY_SERVICE | Volume key SOS trigger |
+
+---
 
 ## 📖 User Guide
 
-### Setting Up Emergency Contacts
+### Setting Up
 
-1. Open the app
-2. Grant all required permissions
-3. Tap the "Edit" icon on Emergency Contacts card
-4. Add contacts using:
-   - **Manual Entry**: Tap the "+" FAB, enter name and phone
-   - **From Contacts**: Tap the "person" FAB, select from phone contacts
-5. Add 3-5 contacts for best results
+1. Open the app and grant all required permissions
+2. Go to Emergency Contacts → add at least one contact
+3. For Volume Guard: tap the green "Enable" banner → find Rakshak in Accessibility settings → enable it
+4. For background detection: tap the orange battery banner → select "Don't optimize" for Rakshak
+5. For Voice Guard: toggle it on from the home screen
 
-### Using the SOS Button
+### SOS Triggers
 
-1. **Method 1: Manual Trigger**
-   - Press the large red SOS button
-   - Confirm in the 3-second countdown dialog
-   - Or tap "Send Now" to skip countdown
+**Button:**
+Tap the red SOS button → 3-second countdown → alert sends. Tap "Send Now" to skip countdown.
 
-2. **Method 2: Voice Activation**
-   - Enable "Voice Guard" toggle on home screen
-   - Say **"Help Rakshak"** clearly
-   - Alert triggers automatically
+**Voice Guard:**
+Enable the toggle → say "Help Rakshak" clearly → SOS triggers automatically. 10-second cooldown before it can trigger again.
 
-### What Happens When SOS is Triggered?
+**Volume Guard:**
+Enable Accessibility Service → press Volume Up and Volume Down simultaneously → SOS triggers anywhere, anytime.
 
-1. ✅ Gets your current GPS location
-2. ✅ Sends SMS to all emergency contacts with:
-   - Emergency alert message
-   - Google Maps link to your location
-   - Timestamp
-3. ✅ Shows notification of success/failure
-4. ✅ Continues tracking in background
+**Widget:**
+Long press home screen → Widgets → Rakshak → drag to home screen → tap SOS button.
 
-### Voice Guard Tips
+### What Happens When SOS Triggers
 
-- 🎤 Works with screen off
-- 🔋 Moderate battery usage (uses foreground service)
-- 🔊 Best in quiet environment
-- 🗣️ Speak clearly: "Help Rakshak"
-- ⚡ Instant trigger (no delay)
+1. Gets your GPS location (parallel dual-strategy, 10-second timeout)
+2. Sends SMS to all emergency contacts with emergency message + Google Maps URL
+3. Notification updates through each stage: Triggered → Getting Location → Sending SMS → Alert Sent
+4. Service stops automatically 4 seconds after completion
 
-## 🔧 Configuration
-
-### Customizing SMS Message
-
-Edit `SMSHelper.kt`:
-
-```kotlin
-val message = """
-    🚨 YOUR CUSTOM MESSAGE 🚨
-    
-    I need immediate help!
-    
-    My current location:
-    $locationUrl
-    
-    Please contact me immediately.
-""".trimIndent()
-```
-
-### Changing Wake Word
-
-Edit `VoiceGuardService.kt`:
-
-```kotlin
-private val WAKE_WORDS = listOf("help rakshak", "emergency", "sos rakshak")
-```
-
-### Adjusting SOS Countdown
-
-Edit `HomeScreen.kt`:
-
-```kotlin
-var sosCountdown by remember { mutableIntStateOf(3) } // Change 3 to desired seconds
-```
+---
 
 ## 🏗️ Project Structure
 
 ```
 Rakshak/
 ├── app/
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/com/safety/rakshak/
-│   │   │   │   ├── data/              # Database, entities, repositories
-│   │   │   │   │   ├── EmergencyContact.kt
-│   │   │   │   │   ├── EmergencyContactDao.kt
-│   │   │   │   │   ├── EmergencyContactRepository.kt
-│   │   │   │   │   └── RakshakDatabase.kt
-│   │   │   │   ├── service/           # Background services
-│   │   │   │   │   ├── VoiceGuardService.kt
-│   │   │   │   │   └── SOSService.kt
-│   │   │   │   ├── ui/                # Compose UI screens
-│   │   │   │   │   ├── HomeScreen.kt
-│   │   │   │   │   ├── ContactsScreen.kt
-│   │   │   │   │   └── theme/
-│   │   │   │   ├── utils/             # Helper utilities
-│   │   │   │   │   ├── LocationHelper.kt
-│   │   │   │   │   ├── SMSHelper.kt
-│   │   │   │   │   └── PermissionHelper.kt
-│   │   │   │   ├── viewmodel/         # ViewModels
-│   │   │   │   │   └── MainViewModel.kt
-│   │   │   │   └── MainActivity.kt
-│   │   │   ├── res/                   # Resources
-│   │   │   └── AndroidManifest.xml
-│   │   └── build.gradle.kts
+│   ├── src/main/
+│   │   ├── java/com/safety/rakshak/
+│   │   │   ├── data/
+│   │   │   │   ├── EmergencyContact.kt
+│   │   │   │   ├── EmergencyContactDao.kt
+│   │   │   │   ├── EmergencyContactRepository.kt
+│   │   │   │   └── RakshakDatabase.kt
+│   │   │   ├── service/
+│   │   │   │   ├── SOSService.kt
+│   │   │   │   ├── VoiceGuardService.kt
+│   │   │   │   └── RakshakAccessibilityService.kt
+│   │   │   ├── ui/
+│   │   │   │   ├── HomeScreen.kt
+│   │   │   │   ├── ContactsScreen.kt
+│   │   │   │   └── theme/
+│   │   │   ├── utils/
+│   │   │   │   ├── LocationHelper.kt
+│   │   │   │   ├── SMSHelper.kt
+│   │   │   │   └── PermissionHelper.kt
+│   │   │   ├── viewmodel/
+│   │   │   │   └── MainViewModel.kt
+│   │   │   ├── widget/
+│   │   │   │   └── SOSWidget.kt
+│   │   │   └── MainActivity.kt
+│   │   ├── res/
+│   │   │   ├── drawable/
+│   │   │   │   ├── widget_background.xml
+│   │   │   │   └── widget_sos_button_bg.xml
+│   │   │   ├── layout/
+│   │   │   │   └── widget_sos.xml
+│   │   │   ├── values/
+│   │   │   │   ├── strings.xml
+│   │   │   │   └── themes.xml
+│   │   │   └── xml/
+│   │   │       ├── accessibility_service_config.xml
+│   │   │       └── sos_widget_info.xml
+│   │   └── AndroidManifest.xml
 │   └── build.gradle.kts
-├── gradle/
-├── build.gradle.kts
-├── settings.gradle.kts
-└── README.md
+└── build.gradle.kts
 ```
 
-## 🎨 UI/UX Features
+---
 
-### Material Design 3
-- Dynamic color theming (Android 12+)
-- Smooth animations and transitions
-- Accessible touch targets
-- Clear visual hierarchy
+## ⚙️ Customization
 
-### Animations
-- Pulsing SOS button (when contacts are added)
-- Smooth screen transitions
-- Loading states
-- Countdown timer animation
+### Change Wake Words
+Edit `VoiceGuardService.kt`:
+```kotlin
+private val WAKE_WORDS = listOf("help rakshak", "rakshak help", "help rakshaak")
+```
 
-### Responsive Design
-- Adapts to different screen sizes
-- Portrait orientation optimized
-- Accessibility features
+### Change SOS Countdown Duration
+Edit `HomeScreen.kt`:
+```kotlin
+var sosCountdown by remember { mutableIntStateOf(3) } // seconds
+```
 
-## 🔒 Privacy & Security
+### Customize SMS Message
+Edit `SMSHelper.kt`:
+```kotlin
+val message = """
+    🚨 EMERGENCY ALERT FROM RAKSHAK 🚨
+    I need immediate help!
+    My location: $locationUrl
+    Please contact me immediately.
+""".trimIndent()
+```
 
-- ✅ All data stored locally (Room Database)
-- ✅ No internet connection required
-- ✅ No data collection or analytics
-- ✅ Location only accessed during emergency
-- ✅ SMS sent directly to contacts (no third-party servers)
-- ✅ Open source and transparent
+### Adjust Shake Detection Sensitivity
+If using ShakeDetectorService, edit `ShakeDetectorService.kt`:
+```kotlin
+private val SHAKE_THRESHOLD = 20f   // lower = more sensitive
+private val REQUIRED_SHAKES  = 3    // number of shakes needed
+private val SHAKE_WINDOW_MS  = 3000L // time window in ms
+```
 
-## 🐛 Troubleshooting
+---
 
-### Voice Guard Not Working
-- Ensure microphone permission is granted
-- Check if quiet environment
-- Try speaking louder/clearer
-- Restart Voice Guard toggle
+## 🔧 Troubleshooting
 
 ### SOS Button Disabled
 - Add at least one emergency contact
-- Check if SMS permission is granted
-- Verify phone numbers are correct
+- Verify SMS permission is granted
 
-### Location Not Sharing
-- Enable GPS/Location services
-- Grant location permission
-- Check if location accuracy is high
-- Try triggering SOS in open area
+### Voice Guard Beep Sound
+- This is Android's built-in microphone privacy indicator (Android 12+)
+- It plays once per listening session — this is expected behavior and cannot be fully suppressed
+- Each session lasts up to 6 seconds of silence before restarting
+
+### Volume Guard Not Working on Lock Screen
+- This is a known OEM restriction on OnePlus/OPPO (OxygenOS) devices
+- Works correctly on Samsung One UI and Stock Android (Pixel)
+- The AccessibilityService is active — the restriction is at manufacturer OS level
+
+### No Notification When SOS Triggered
+- Go to Settings → Apps → Rakshak → Notifications → ensure it is enabled
+- Disable battery optimization for Rakshak (use the in-app banner)
+
+### Location Unavailable
+- Enable GPS in device settings
+- Move to an open area for better GPS signal
+- SMS will still send even if location is unavailable (without the Maps link)
 
 ### SMS Not Sending
-- Verify phone numbers (include country code if needed)
-- Check SMS permission
-- Ensure phone has SMS capability
-- Check network signal
+- Verify phone numbers include correct country code (e.g. +91 for India)
+- Check SMS permission is granted
+- Ensure active SIM with SMS plan
 
-## 📊 Testing Recommendations
+---
 
-### Before Exhibition
+## 📊 Performance
 
-1. **Permission Testing**
-   - Test all permission flows
-   - Verify permission denial handling
+| Metric | Value |
+|--------|-------|
+| SOS to SMS (with location) | 4–5 seconds |
+| SOS to SMS (without location) | 2–3 seconds |
+| Voice detection latency | 1–2 seconds |
+| Volume key trigger latency | < 500ms |
+| App cold start | < 2 seconds |
+| APK size | ~15 MB |
 
-2. **SOS Testing**
-   - Test with real phone numbers (your own)
-   - Verify SMS delivery
-   - Check location accuracy
-   - Test countdown cancellation
+---
 
-3. **Voice Testing**
-   - Test in quiet room
-   - Test in noisy environment
-   - Test with different accents
-   - Test multiple trigger phrases
+## 🔒 Privacy & Security
 
-4. **UI/UX Testing**
-   - Test on different screen sizes
-   - Test light/dark themes
-   - Check all navigation flows
-   - Verify error messages
+- All data stored locally using Room Database
+- No internet connection required for core features
+- No analytics, no data collection, no third-party servers
+- Location accessed only during SOS trigger
+- SMS sent directly from device SIM — no gateway or relay
 
-### Demo Script for Exhibition
+---
 
-```
-1. "This is Rakshak, a women safety app"
-2. Show permissions screen → grant permissions
-3. Add 2-3 emergency contacts
-4. Demonstrate SOS button with countdown
-5. Enable Voice Guard
-6. Say "Help Rakshak" to trigger voice SOS
-7. Show SMS sent notification
-8. Explain real-world use cases
-```
+## 🔮 Planned Features
 
-## 🎯 Future Enhancements (Post-Exhibition)
+- [ ] Porcupine/Vosk wake word engine for silent always-on detection
+- [ ] Fake call simulation for discreet escape
+- [ ] Ambient audio recording during SOS
+- [ ] Timer-based auto-SOS
+- [ ] Live location sharing via Firebase
+- [ ] Safe Walk mode with auto-SOS on inactivity
+- [ ] Wear OS companion app
+- [ ] Multi-language support (Hindi, Tamil, Telugu)
+- [ ] iOS version
 
-- [ ] Fake call feature
-- [ ] Audio recording during emergency
-- [ ] Police station locator
-- [ ] Safe zone alerts
-- [ ] Battery optimization
-- [ ] Widget for quick access
-- [ ] Multiple language support
-- [ ] WhatsApp integration
-- [ ] Cloud backup of contacts
-- [ ] Panic alarm sound
+---
 
-## 🤝 Contributing
+## 🛠️ Tech Stack
 
-This is a project exhibition app. If you want to contribute:
+| Category | Technology |
+|----------|-----------|
+| Language | Kotlin |
+| UI | Jetpack Compose + Material 3 |
+| Architecture | MVVM |
+| Database | Room (SQLite) |
+| Async | Kotlin Coroutines + Flow |
+| Location | FusedLocationProviderClient |
+| Voice | Android SpeechRecognizer |
+| Volume Keys | Android AccessibilityService |
+| Widget | AppWidget API |
+| Services | Android Foreground Services |
+| Navigation | Navigation Compose |
+| Permissions | Accompanist Permissions |
 
-1. Fork the repository
-2. Create feature branch
-3. Commit changes
-4. Push to branch
-5. Create Pull Request
+---
 
 ## 📄 License
 
-This project is created for educational purposes (Project Exhibition).
+MIT License — feel free to use, modify and distribute.
+
+---
 
 ## 👨‍💻 Developer
 
-Created for Project Exhibition - Rakshak Women Safety App
-
-## 🙏 Acknowledgments
-
-- Android Jetpack Compose team
-- Material Design 3 guidelines
-- Women safety initiatives worldwide
-
-## 📞 Support
-
-For exhibition queries or technical support:
-- Check troubleshooting section
-- Review code comments
-- Test on real device (not just emulator)
+Built by Vaibhav Pandey — Android Developer
 
 ---
 
 **Made with ❤️ for Women's Safety**
 
-*"Safety is not a gadget but a state of mind" - Eleanor Everet*
+*"Safety is not a gadget but a state of mind."*
