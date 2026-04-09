@@ -320,7 +320,7 @@ MIT License — feel free to use, modify and distribute.
 
 ## 👨‍💻 Developer
 
-Built by Vaibhav Pandey — Android Developer
+Built by Vaibhav Pandey and team — Android Developer
 
 ---
 
