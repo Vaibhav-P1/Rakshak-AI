@@ -8,50 +8,46 @@ import android.app.Service
 import android.content.Intent
 import android.media.AudioManager
 import android.os.Build
-import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.safety.rakshak.MainActivity
 import com.safety.rakshak.R
+import org.json.JSONObject
+import org.vosk.Model
+import org.vosk.Recognizer
+import org.vosk.android.RecognitionListener
+import org.vosk.android.SpeechService
+import java.util.Locale
 
-class VoiceGuardService : Service() {
+class VoiceGuardService : Service(), RecognitionListener {
 
-    private var speechRecognizer: SpeechRecognizer? = null
-    private var isListening  = false
-    private var isActive     = false
-    private var sosCooldown  = false  // prevents double trigger
+    private var model: Model? = null
+    private var speechService: SpeechService? = null
     private var wakeLock: PowerManager.WakeLock? = null
-    private var screenWakeLock: PowerManager.WakeLock? = null
-    private val mainHandler  = Handler(Looper.getMainLooper())
-    private lateinit var audioManager: AudioManager
+    private var isActive = false
+    private var sosCooldown = false
+    private val mainHandler = Handler(Looper.getMainLooper())
 
-    private val WAKE_WORDS = listOf(
-        "help rakshak", "rakshak help",
-        "help rakshaak", "raksha help"
-    )
 
     companion object {
-        private const val TAG              = "VoiceGuardService"
-        private const val NOTIFICATION_ID  = 1001
-        private const val CHANNEL_ID       = "voice_guard_channel"
+        private const val TAG = "VoiceGuardService"
+        private const val NOTIFICATION_ID = 1001
+        private const val CHANNEL_ID = "voice_guard_channel"
         const val ACTION_START_VOICE_GUARD = "START_VOICE_GUARD"
         const val ACTION_STOP_VOICE_GUARD  = "STOP_VOICE_GUARD"
         const val ACTION_TRIGGER_SOS       = "TRIGGER_SOS"
-        private const val SOS_COOLDOWN_MS  = 10_000L // 10s before next trigger allowed
+        private const val SOS_COOLDOWN_MS  = 10_000L
+        private const val MODEL_NAME       = "vosk-model-small-en-us-0.15"
     }
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        audioManager = getSystemService(AudioManager::class.java)
-        acquireWakeLocks()
+        acquireWakeLock()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -62,29 +58,25 @@ class VoiceGuardService : Service() {
         return START_STICKY
     }
 
-    // ── Wake locks ────────────────────────────────────────────────
-    private fun acquireWakeLocks() {
+    // ── Wake lock ─────────────────────────────────────────────────
+    private fun acquireWakeLock() {
         try {
             val pm = getSystemService(PowerManager::class.java)
             wakeLock = pm.newWakeLock(
                 PowerManager.PARTIAL_WAKE_LOCK,
-                "Rakshak::VoiceGuardCPU"
-            ).apply { setReferenceCounted(false); acquire(60 * 60 * 1000L) }
-
-            @Suppress("DEPRECATION")
-            screenWakeLock = pm.newWakeLock(
-                PowerManager.SCREEN_DIM_WAKE_LOCK or PowerManager.ON_AFTER_RELEASE,
-                "Rakshak::VoiceGuardScreen"
-            ).apply { setReferenceCounted(false); acquire(60 * 60 * 1000L) }
+                "Rakshak::VoiceGuardVosk"
+            ).apply {
+                setReferenceCounted(false)
+                acquire(60 * 60 * 1000L)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "WakeLock failed: ${e.message}")
         }
     }
 
-    private fun releaseWakeLocks() {
+    private fun releaseWakeLock() {
         try {
             if (wakeLock?.isHeld == true) wakeLock?.release()
-            if (screenWakeLock?.isHeld == true) screenWakeLock?.release()
         } catch (e: Exception) { }
     }
 
@@ -92,163 +84,178 @@ class VoiceGuardService : Service() {
     private fun startVoiceGuard() {
         isActive = true
         startForeground(NOTIFICATION_ID, createNotification(
-            "Voice Guard Active", "Listening for 'Help Rakshak'..."
+            "Voice Guard Active", "Loading voice model..."
         ))
-        initRecognizer()
-        startListening()
+
+        // Manual model extraction — bypasses StorageService.unpack()
+        // which has known issues with nested asset folder structures
+        Thread {
+            try {
+                val modelDir = java.io.File(filesDir, MODEL_NAME)
+                if (!modelDir.exists()) {
+                    Log.d(TAG, "Extracting model from assets to ${modelDir.absolutePath}")
+                    copyAssetFolder(MODEL_NAME, modelDir.absolutePath)
+                }
+
+                val loadedModel = Model(modelDir.absolutePath)
+                model = loadedModel
+
+                mainHandler.post {
+                    updateNotification("Voice Guard Active", "Listening for emergency help...")
+                    startListeningWithVosk()
+                }
+                Log.d(TAG, "Vosk model loaded successfully from ${modelDir.absolutePath}")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Manual model load failed: ${e.message}", e)
+                mainHandler.post {
+                    updateNotification("Voice Guard Error", "Model load failed: ${e.message}")
+                }
+            }
+        }.start()
+    }
+
+    // Recursively copies an assets folder to internal storage
+    private fun copyAssetFolder(assetPath: String, targetPath: String): Boolean {
+        return try {
+            val assetManager = assets
+            val files = assetManager.list(assetPath) ?: return false
+
+            java.io.File(targetPath).mkdirs()
+
+            if (files.isEmpty()) {
+                // It's a file, not a folder
+                assetManager.open(assetPath).use { input ->
+                    java.io.File(targetPath).outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            } else {
+                // It's a folder, recurse into it
+                for (file in files) {
+                    val subAssetPath = "$assetPath/$file"
+                    val subTargetPath = "$targetPath/$file"
+                    val subFiles = assetManager.list(subAssetPath)
+                    if (subFiles.isNullOrEmpty()) {
+                        // Leaf file
+                        assetManager.open(subAssetPath).use { input ->
+                            java.io.File(subTargetPath).outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                    } else {
+                        // Nested folder — recurse
+                        copyAssetFolder(subAssetPath, subTargetPath)
+                    }
+                }
+            }
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "copyAssetFolder error for $assetPath: ${e.message}", e)
+            false
+        }
     }
 
     private fun stopVoiceGuard() {
         isActive = false
         mainHandler.removeCallbacksAndMessages(null)
-        stopListening()
-        releaseWakeLocks()
+        speechService?.stop()
+        speechService?.shutdown()
+        speechService = null
+        releaseWakeLock()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
-    private fun initRecognizer() {
+    private fun startListeningWithVosk() {
+        if (!isActive || model == null) return
         try {
-            speechRecognizer?.destroy()
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-            speechRecognizer?.setRecognitionListener(recognitionListener)
+            val sampleRate = 16000.0f
+            val rec = Recognizer(model, sampleRate)
+
+            val audioManager = getSystemService(android.media.AudioManager::class.java)
+            audioManager.requestAudioFocus(
+                null,
+                android.media.AudioManager.STREAM_VOICE_CALL,
+                android.media.AudioManager.AUDIOFOCUS_GAIN
+            )
+
+            speechService = SpeechService(rec, sampleRate)
+            speechService?.startListening(this)
+            Log.d(TAG, "Vosk listening with grammar at ${sampleRate}Hz")
         } catch (e: Exception) {
-            Log.e(TAG, "initRecognizer: ${e.message}")
+            Log.e(TAG, "startListeningWithVosk error: ${e.message}", e)
+            if (isActive) mainHandler.postDelayed({ startListeningWithVosk() }, 2000)
         }
     }
 
-    private fun startListening() {
-        if (!isActive || isListening) return
+    // ── Vosk RecognitionListener callbacks ──────────────────────────
+    // These fire continuously as Vosk processes raw audio — completely
+    // silent, no Android privacy beep since we never use SpeechRecognizer
 
-        mainHandler.post {
-            try {
-                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
-                    putExtra("android.speech.extra.EXTRA_CALLING_PACKAGE", packageName)
-                    putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 6000L)
-                    putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 6000L)
-                    putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 300L)
-                }
-                speechRecognizer?.startListening(intent)
-                isListening = true
-                Log.d(TAG, "Listening started")
-            } catch (e: Exception) {
-                Log.e(TAG, "startListening: ${e.message}")
-                isListening = false
-                scheduleRestart(2000L)
-            }
+    override fun onPartialResult(hypothesis: String?) {
+        // Ignore partial results to avoid false SOS triggers.
+    }
+
+    override fun onResult(hypothesis: String?) {
+        Log.d(TAG, "Result: $hypothesis")
+        checkForWakeWord(hypothesis)
+    }
+
+    override fun onFinalResult(hypothesis: String?) {
+        Log.d(TAG, "Final: $hypothesis")
+        checkForWakeWord(hypothesis)
+    }
+
+    override fun onError(exception: Exception?) {
+        Log.e(TAG, "Vosk error: ${exception?.message}")
+        if (isActive) {
+            mainHandler.postDelayed({ startListeningWithVosk() }, 2000)
         }
     }
 
-    private fun stopListening() {
-        isListening = false
+    override fun onTimeout() {
+        // Vosk session timeout — restart listening
+        if (isActive) startListeningWithVosk()
+    }
+
+    private fun checkForWakeWord(jsonResult: String?) {
+        if (jsonResult.isNullOrBlank() || sosCooldown) return
+
         try {
-            speechRecognizer?.cancel()
-            speechRecognizer?.destroy()
-            speechRecognizer = null
-        } catch (e: Exception) { }
-    }
+            val json = JSONObject(jsonResult)
 
-    // Only mute once at service start — not on every restart
-    private fun muteStartupBeep() {
-        try {
-            audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
-                AudioManager.ADJUST_MUTE, 0)
-            mainHandler.postDelayed({
-                try { audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
-                    AudioManager.ADJUST_UNMUTE, 0) } catch (e: Exception) { }
-            }, 300)
-        } catch (e: Exception) { }
-    }
+            val text = json.optString("text")
+                .lowercase(Locale.ROOT)
+                .replace("[unk]", "")
+                .trim()
 
-    private fun scheduleRestart(delayMs: Long = 1000L) {
-        if (!isActive) return
-        mainHandler.postDelayed({
-            if (isActive && !isListening) {
-                initRecognizer()
-                startListening()
-            }
-        }, delayMs)
-    }
+            if (text.isBlank()) return
 
-    // ── Recognition listener ──────────────────────────────────────
-    private val recognitionListener = object : RecognitionListener {
+            Log.d(TAG, "Recognized: $text")
 
-        override fun onReadyForSpeech(params: Bundle?) { isListening = true }
-        override fun onBeginningOfSpeech() {}
-        override fun onRmsChanged(rmsdB: Float) {}
-        override fun onBufferReceived(buffer: ByteArray?) {}
-        override fun onEndOfSpeech() { isListening = false }
+            val helpCount = text
+                .split(Regex("\\s+"))
+                .count { it == "help" }
 
-        override fun onError(error: Int) {
-            isListening = false
-            if (!isActive) return
-            val delay = when (error) {
-                SpeechRecognizer.ERROR_NETWORK,
-                SpeechRecognizer.ERROR_NETWORK_TIMEOUT,
-                SpeechRecognizer.ERROR_SERVER            -> 5000L
-                SpeechRecognizer.ERROR_RECOGNIZER_BUSY   -> 3000L
-                SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> {
-                    stopVoiceGuard(); return
-                }
-                else -> 1000L
-            }
-            Log.w(TAG, "Error $error — restarting in ${delay}ms")
-            scheduleRestart(delay)
-        }
+            if (helpCount >= 3) {
+                Log.d(TAG, "Emergency phrase detected")
 
-        override fun onResults(results: Bundle?) {
-            isListening = false
-            val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-            Log.d(TAG, "Results: $matches")
-
-            val wakeWordFound = checkForWakeWord(matches)
-
-            // Fix 1: Always restart listening after results
-            // whether wake word was found or not
-            // This is what allows 2nd, 3rd trigger to work
-            if (isActive) {
-                if (wakeWordFound) {
-                    // Restart after cooldown so SOS can trigger again
-                    scheduleRestart(SOS_COOLDOWN_MS)
-                } else {
-                    // No wake word — restart immediately reusing same recognizer
-                    startListening()
-                }
-            }
-        }
-
-        override fun onPartialResults(partialResults: Bundle?) {
-            val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-            if (checkForWakeWord(matches)) {
-                // Cancel current session — onError will restart
-                speechRecognizer?.cancel()
-            }
-        }
-
-        override fun onEvent(eventType: Int, params: Bundle?) {}
-    }
-
-    private fun checkForWakeWord(matches: ArrayList<String>?): Boolean {
-        if (sosCooldown) return false  // prevent double trigger
-        matches?.forEach { result ->
-            if (WAKE_WORDS.any { result.lowercase().trim().contains(it) }) {
-                Log.d(TAG, "Wake word detected: $result")
                 sosCooldown = true
-                // Reset cooldown after SOS_COOLDOWN_MS
-                mainHandler.postDelayed({ sosCooldown = false }, SOS_COOLDOWN_MS)
+                mainHandler.postDelayed({
+                    sosCooldown = false
+                }, SOS_COOLDOWN_MS)
+
                 triggerSOS()
-                return true
             }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "checkForWakeWord parse error: ${e.message}")
         }
-        return false
     }
 
+    // ── SOS Trigger ───────────────────────────────────────────────
     private fun triggerSOS() {
-        Log.d(TAG, "Triggering SOS from VoiceGuard")
         sendBroadcast(Intent(ACTION_TRIGGER_SOS))
         val serviceIntent = Intent(this, SOSService::class.java).apply {
             action = SOSService.ACTION_TRIGGER_SOS
@@ -275,6 +282,13 @@ class VoiceGuardService : Service() {
             .build()
     }
 
+    private fun updateNotification(title: String, content: String) {
+        try {
+            getSystemService(NotificationManager::class.java)
+                .notify(NOTIFICATION_ID, createNotification(title, content))
+        } catch (e: Exception) { }
+    }
+
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -292,9 +306,9 @@ class VoiceGuardService : Service() {
         super.onDestroy()
         isActive = false
         mainHandler.removeCallbacksAndMessages(null)
-        try { audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
-            AudioManager.ADJUST_UNMUTE, 0) } catch (e: Exception) { }
-        stopListening()
-        releaseWakeLocks()
+        speechService?.stop()
+        speechService?.shutdown()
+        speechService = null
+        releaseWakeLock()
     }
 }
