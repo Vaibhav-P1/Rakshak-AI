@@ -51,12 +51,14 @@
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
-        <!-- SOS Service -->
+        <!-- SOS Service. "location" is used when location permission allows it;
+             "shortService" (Android 14+) is the fallback so the SOS SMS never
+             depends on being allowed to start a location foreground service. -->
         <service
             android:name=".service.SOSService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="location" />
+            android:foregroundServiceType="location|shortService" />
 
         <!-- Volume Key Accessibility Service -->
         <service

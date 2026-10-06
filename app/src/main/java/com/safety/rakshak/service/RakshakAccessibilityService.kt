@@ -2,13 +2,12 @@ package com.safety.rakshak.service
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
-import android.content.Intent
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
+import com.safety.rakshak.sos.SosSource
 
 class RakshakAccessibilityService : AccessibilityService() {
 
@@ -72,15 +71,8 @@ class RakshakAccessibilityService : AccessibilityService() {
     }
 
     private fun triggerSOS() {
-        Log.d(TAG, "SOS triggered by Volume Up + Down on locked screen!")
-        val intent = Intent(this, SOSService::class.java).apply {
-            action = SOSService.ACTION_TRIGGER_SOS
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
-        }
+        Log.d(TAG, "SOS triggered by Volume Up + Down")
+        SOSService.trigger(this, SosSource.VOLUME_KEYS)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,6 +32,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.safety.rakshak.service.SOSService
 import com.safety.rakshak.service.VoiceGuardService
+import com.safety.rakshak.sos.SosSource
 import com.safety.rakshak.viewmodel.MainViewModel
 
 // ── Design tokens ────────────────────────────────────────────────
@@ -57,8 +59,9 @@ fun HomeScreen(
     val contacts       by viewModel.contacts.collectAsState()
     val isVoiceActive  by viewModel.isVoiceGuardActive.collectAsState()
 
-    var showSOSDialog      by remember { mutableStateOf(false) }
-    var sosCountdown       by remember { mutableIntStateOf(3) }
+    // Saveable so a rotation during the countdown doesn't silently cancel the SOS.
+    var showSOSDialog      by rememberSaveable { mutableStateOf(false) }
+    var sosCountdown       by rememberSaveable { mutableIntStateOf(3) }
     var isBatteryOptimized by remember { mutableStateOf(false) }
     var isAccessibilityOn  by remember { mutableStateOf(false) }
 
@@ -476,11 +479,5 @@ fun isAccessibilityServiceEnabled(context: android.content.Context): Boolean {
 }
 
 private fun triggerSOS(context: android.content.Context) {
-    val intent = Intent(context, SOSService::class.java).apply {
-        action = SOSService.ACTION_TRIGGER_SOS
-    }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-        context.startForegroundService(intent)
-    else
-        context.startService(intent)
+    SOSService.trigger(context, SosSource.APP_BUTTON)
 }

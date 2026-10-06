@@ -34,6 +34,9 @@ jobs:
       - name: Run unit tests
         run: ./gradlew :app:testDebugUnitTest
 
+      - name: Compile instrumentation tests
+        run: ./gradlew :app:assembleDebugAndroidTest
+
       - name: Run Android Lint
         run: ./gradlew :app:lintDebug
 

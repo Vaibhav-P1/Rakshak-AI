@@ -16,6 +16,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.safety.rakshak.MainActivity
 import com.safety.rakshak.R
+import com.safety.rakshak.sos.SosSource
 import org.json.JSONObject
 import org.vosk.Model
 import org.vosk.Recognizer
@@ -39,7 +40,6 @@ class VoiceGuardService : Service(), RecognitionListener {
         private const val CHANNEL_ID = "voice_guard_channel"
         const val ACTION_START_VOICE_GUARD = "START_VOICE_GUARD"
         const val ACTION_STOP_VOICE_GUARD  = "STOP_VOICE_GUARD"
-        const val ACTION_TRIGGER_SOS       = "TRIGGER_SOS"
         private const val SOS_COOLDOWN_MS  = 10_000L
         private const val MODEL_NAME       = "vosk-model-small-en-us-0.15"
     }
@@ -256,14 +256,7 @@ class VoiceGuardService : Service(), RecognitionListener {
 
     // ── SOS Trigger ───────────────────────────────────────────────
     private fun triggerSOS() {
-        sendBroadcast(Intent(ACTION_TRIGGER_SOS))
-        val serviceIntent = Intent(this, SOSService::class.java).apply {
-            action = SOSService.ACTION_TRIGGER_SOS
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            startForegroundService(serviceIntent)
-        else
-            startService(serviceIntent)
+        SOSService.trigger(this, SosSource.VOICE)
     }
 
     // ── Notification ──────────────────────────────────────────────

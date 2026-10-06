@@ -1,10 +1,6 @@
 package com.safety.rakshak
 
 import android.Manifest
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -34,7 +30,6 @@ import androidx.navigation.compose.rememberNavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.safety.rakshak.service.VoiceGuardService
 import com.safety.rakshak.ui.ContactsScreen
 import com.safety.rakshak.ui.HomeScreen
 import com.safety.rakshak.ui.theme.RakshakTheme
@@ -54,28 +49,13 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
 
-    private val sosReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == VoiceGuardService.ACTION_TRIGGER_SOS) {
-                viewModel.triggerSOS()
-            }
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val filter = IntentFilter(VoiceGuardService.ACTION_TRIGGER_SOS)
-        registerReceiver(sosReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         setContent {
             RakshakTheme {
                 RakshakApp(viewModel = viewModel)
             }
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        try { unregisterReceiver(sosReceiver) } catch (e: Exception) { }
     }
 }
 

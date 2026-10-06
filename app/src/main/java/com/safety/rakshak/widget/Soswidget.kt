@@ -5,11 +5,11 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.widget.RemoteViews
 import com.safety.rakshak.R
 import com.safety.rakshak.data.RakshakDatabase
 import com.safety.rakshak.service.SOSService
+import com.safety.rakshak.sos.SosSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -39,24 +39,8 @@ class SOSWidget : AppWidgetProvider() {
     }
 
     private fun triggerSOSFromWidget(context: Context) {
-        // Fix: Use a full activity trampoline to start the foreground service
-        // Direct startForegroundService from BroadcastReceiver is restricted
-        // on Android 14 — going through activity context fixes this
-        val sosIntent = Intent(context, SOSService::class.java).apply {
-            action = SOSService.ACTION_TRIGGER_SOS
-            // FLAG_FROM_BACKGROUND tells system this is intentional
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(sosIntent)
-            } else {
-                context.startService(sosIntent)
-            }
-        } catch (e: Exception) {
-            // Fallback — try regular startService
-            try { context.startService(sosIntent) } catch (ex: Exception) { }
-        }
+        // A widget tap counts as user interaction, so the foreground start is allowed.
+        SOSService.trigger(context, SosSource.WIDGET)
     }
 }
 

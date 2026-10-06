@@ -21,9 +21,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isVoiceGuardActive = MutableStateFlow(false)
     val isVoiceGuardActive: StateFlow<Boolean> = _isVoiceGuardActive.asStateFlow()
 
-    private val _sosTriggered = MutableStateFlow(false)
-    val sosTriggered: StateFlow<Boolean> = _sosTriggered.asStateFlow()
-
     init {
         val database = RakshakDatabase.getDatabase(application)
         repository = EmergencyContactRepository(database.emergencyContactDao())
@@ -52,13 +49,5 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setVoiceGuardActive(active: Boolean) {
         _isVoiceGuardActive.value = active
-    }
-
-    fun triggerSOS() {
-        _sosTriggered.value = true
-    }
-
-    fun resetSOSState() {
-        _sosTriggered.value = false
     }
 }

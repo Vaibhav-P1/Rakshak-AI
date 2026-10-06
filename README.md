@@ -17,12 +17,16 @@
 - 🔊 **Volume Guard** — Press **Volume Up + Volume Down together** to trigger SOS (requires enabling Rakshak's Accessibility Service)
 - 📲 **Home Screen Widget** — 4×2 widget. **One tap sends SOS immediately** (no countdown)
 
-> Only the in-app button has a countdown/cancel step. Voice, Volume and Widget triggers send immediately.
+> Only the in-app button has a countdown/cancel step. Voice, Volume and Widget triggers send immediately. Any SOS can be followed by **"I'm safe"** from the notification.
 
 ### Core Functionality
-- 📍 **Location in SMS** — The alert includes a Google Maps link for the location obtained at trigger time. It is a **single location snapshot, not continuous live tracking**
+- 🚨 **Reliable SOS pipeline** — The alert SMS is sent **immediately** and never waits for or depends on location. If location permission is off or no fix is available, the SMS still goes out
+- 📍 **Location in SMS** — A fresh location (< 2 min old) goes in the first SMS with accuracy and time. Otherwise a fresh fix is requested and sent as a follow-up SMS. If none arrives, an older fix is sent **clearly labelled with its age**, or contacts are told the location is unavailable. Approximate location is supported. This is a location snapshot, **not continuous live tracking**
+- ✅ **Per-contact SMS results** — Each SMS waits for the network's sent-result. Failures are retried once and reported as sent / not confirmed / failed
+- 🔔 **Persistent result notification** — Shows exactly what happened and stays until dismissed. It has an **"I'm safe"** action that tells alerted contacts to stand down. On failure it offers **Call 112** and **Open SMS app**
+- 💾 **Survives process death** — SOS progress is saved. If Android kills the app mid-SOS, the service restarts and resumes without re-alerting contacts who already got the SMS
+- ✉️ **Single-part SMS** — Messages use GSM-7 text only (no emoji) and fit in one 160-character SMS
 - 👥 **Emergency Contacts** — Add contacts manually or pick them from your phone. Delete with confirmation (editing is not yet supported)
-- 🔔 **Status Notifications** — Notification updates through each stage: Triggered → Getting Location → Sending SMS → Result
 - 🌙 **Dark UI** — Built with Jetpack Compose
 - 🔋 **Battery Optimization Banner** — Shown while Voice Guard is on, linking to system settings
 - ♿ **Accessibility Setup Banner** — Guides you to enable Volume Guard
@@ -31,9 +35,10 @@
 - ✅ Core SOS flow is offline — SMS + GPS, no network calls, no backend
 - ✅ No analytics or tracking SDKs
 - ✅ All data stored locally (Room)
-- ✅ Foreground service types declared for Android 14 (`location`, `microphone`)
+- ✅ Foreground service types for Android 14: SOS uses `location`, with `shortService` as a fallback; Voice Guard uses `microphone`
+- ✅ SOS logic in a pure-Kotlin, unit-tested `SosOrchestrator`
 - ✅ Kotlin, Jetpack Compose, Room, StateFlow, Coroutines
-- ✅ CI on every push / PR: build, Android Lint, unit tests
+- ✅ CI on every push / PR: build, unit tests, instrumentation-test compile, Android Lint
 
 ---
 
@@ -124,11 +129,11 @@ Or open the project in Android Studio and run the `app` configuration.
 **Widget:** Long-press the home screen → Widgets → Rakshak → drag to the home screen → tap SOS.
 
 ### What Happens When SOS Triggers
-1. The SOS foreground service starts and loads your emergency contacts
-2. It requests your location (up to a 10-second timeout; a recently cached location may be used)
-3. It sends an SMS to every contact with an emergency message and a Google Maps link (or "Location unavailable")
-4. Notifications update through each stage
-5. The service stops about 4 seconds after finishing, and the notification is removed
+1. The SOS foreground service starts (type `location`; if Android refuses that, `shortService` on Android 14+) and loads your emergency contacts
+2. **It sends the alert SMS to every contact immediately.** If a fresh location (< 2 min) is cached, it's included; otherwise the SMS says your location will follow, or that it's unavailable if location permission is off
+3. In parallel it requests a fresh location (up to 30 s) and sends it as a follow-up SMS. If none arrives, it sends the last known location labelled with its age, or says location is unavailable
+4. It waits for each SMS's sent-result from the network, retries failures once after 10 s, and saves progress after each step
+5. A result notification stays on screen with what happened and an **"I'm safe"** action. On failure it offers **Call 112** and **Open SMS app**
 
 ---
 
@@ -136,25 +141,34 @@ Or open the project in Android Studio and run the `app` configuration.
 
 ```
 Rakshak/
-├── .github/workflows/android-ci.yml     # CI: build, lint, unit tests
+├── .github/workflows/android-ci.yml     # CI: build, unit tests, lint
+├── docs/DEVELOPMENT_PROGRESS.md         # Phase-by-phase development log
 ├── app/
 │   ├── lint-baseline.xml                # Known lint issues (to be burned down)
 │   ├── src/main/
 │   │   ├── assets/vosk-model-small-en-us-0.15/   # Offline speech model (~68 MB)
 │   │   ├── java/com/safety/rakshak/
 │   │   │   ├── data/                    # Room entity, DAO, repository, database
+│   │   │   ├── sos/                     # SOS pipeline (pure Kotlin, unit-tested)
+│   │   │   │   ├── SosOrchestrator.kt   # Send → locate → follow-up → persist
+│   │   │   │   ├── SosMessages.kt       # GSM-7, single-part SMS texts
+│   │   │   │   ├── SosModels.kt / SosPorts.kt / SosSessionCodec.kt
+│   │   │   │   └── platform/            # Android impls: SmsManager, Fused location, Room, prefs
 │   │   │   ├── service/
-│   │   │   │   ├── SOSService.kt
+│   │   │   │   ├── SOSService.kt        # Foreground service running the orchestrator
+│   │   │   │   ├── SosNotifications.kt  # Progress + persistent result notifications
 │   │   │   │   ├── VoiceGuardService.kt
 │   │   │   │   ├── RakshakAccessibilityService.kt
 │   │   │   │   └── ShakeDetectorService.kt   # Experimental, NOT registered/active
 │   │   │   ├── ui/                      # HomeScreen, ContactsScreen, theme
-│   │   │   ├── utils/                   # LocationHelper, SMSHelper, PermissionHelper
+│   │   │   ├── utils/PermissionHelper.kt
 │   │   │   ├── viewmodel/MainViewModel.kt
 │   │   │   ├── widget/Soswidget.kt      # SOSWidget
 │   │   │   └── MainActivity.kt          # Navigation + permission screen
 │   │   ├── res/
 │   │   └── AndroidManifest.xml
+│   ├── src/test/                        # JVM unit tests (SOS pipeline, messages, codec)
+│   ├── src/androidTest/                 # On-device tests (SMS gateway, service end-to-end)
 │   └── build.gradle.kts
 ├── RAKSHAK_PRODUCTION_AUDIT.md          # Production-readiness audit & roadmap
 └── build.gradle.kts
@@ -174,11 +188,14 @@ if (helpCount >= 3) { /* trigger SOS */ }
 ### SOS countdown duration
 Edit `HomeScreen.kt`:
 ```kotlin
-var sosCountdown by remember { mutableIntStateOf(3) } // seconds
+var sosCountdown by rememberSaveable { mutableIntStateOf(3) } // seconds
 ```
 
-### SMS message
-Edit `SMSHelper.kt` (`sendSOSMessage`).
+### SMS messages
+Edit `sos/SosMessages.kt`. Keep messages GSM-7 only and at most 160 characters; `SosMessagesTest` enforces both.
+
+### SOS timing
+Edit `SosConfig` in `sos/SosModels.kt` (fresh-location age, location timeout, retry delay, resume window).
 
 ---
 
@@ -186,16 +203,16 @@ Edit `SMSHelper.kt` (`sendSOSMessage`).
 
 These are documented in detail in [`RAKSHAK_PRODUCTION_AUDIT.md`](RAKSHAK_PRODUCTION_AUDIT.md) and are being fixed in phases:
 
-- **SOS is not sent if precise location permission is missing.** The service aborts before sending SMS
-- **"Alert Sent" means the SMS was handed to the system, not confirmed sent.** Delivery results are not checked yet (e.g. no SIM / no signal can still show success)
-- A **cached, possibly outdated location** may be used
-- The result notification is removed about 4 seconds after SOS finishes
-- Choosing **"Approximate location"** on Android 12+ keeps the app on the permission screen
-- Voice, Volume and Widget triggers have **no countdown/cancel**
+- "Sent" means the **network accepted** the SMS. Delivery to the recipient's phone is not confirmed (no delivery reports yet)
+- If Android won't let the SOS run as a *location* foreground service (e.g. some background triggers on Android 14+), it runs as a short service. The SMS is still sent, but a fresh location is usually unavailable, so contacts get the last known location (labelled with its age) or "unavailable"
+- Choosing **"Approximate location"** on Android 12+ still keeps the app on the permission screen (the SOS pipeline itself supports approximate location; the permission screen is fixed in Phase 2)
+- Voice, Volume and Widget triggers have **no countdown/cancel** before sending (use "I'm safe" afterwards)
+- Dual-SIM: SMS uses the system's default SMS SIM
+- The emergency number in messages and the **Call 112** action is fixed to 112 (India)
 - Voice Guard requests audio focus, which can pause music playback, and it uses significant battery
 - Volume Guard may not work on the lock screen on some OEM builds (e.g. OxygenOS)
 - Not yet compliant with current Google Play target-SDK and 16 KB page-size requirements
-- No automated tests yet (CI runs the test task so tests are enforced as they are added)
+- Automated tests cover the SOS pipeline only. UI, Voice Guard and Volume Guard have no tests yet
 
 ---
 
@@ -209,13 +226,13 @@ These are documented in detail in [`RAKSHAK_PRODUCTION_AUDIT.md`](RAKSHAK_PRODUC
 
 ### Location Unavailable
 - Enable location services in device settings and move to an open area
-- If GPS is off, SMS is still sent with "Location unavailable"
-- If the location **permission** is missing, SOS currently does not send (see Known Limitations)
+- If GPS is off or the location permission is missing, the SMS is still sent and says location is unavailable
 
 ### SMS Not Sending
 - Check phone numbers include the country code (e.g. +91 for India)
 - Check the SMS permission is granted
 - Make sure an active SIM with SMS service is present
+- Check the SOS result notification: it shows which contacts failed and offers **Open SMS app** as a fallback
 
 ### Voice Guard Not Triggering
 - Say "help" three times in one phrase, then pause briefly
@@ -238,7 +255,7 @@ These are documented in detail in [`RAKSHAK_PRODUCTION_AUDIT.md`](RAKSHAK_PRODUC
 See section **S. Recommended Development Roadmap** in [`RAKSHAK_PRODUCTION_AUDIT.md`](RAKSHAK_PRODUCTION_AUDIT.md):
 
 - **Phase 0** — Repo hygiene & CI ✅
-- **Phase 1** — SOS reliability core
+- **Phase 1** — SOS reliability core ✅
 - **Phase 2** — Permissions, security, Play policy
 - **Phase 3** — Trigger hardening (widget/volume countdown, Voice Guard decision, Quick Settings tile)
 - **Phase 4** — UI/UX polish, accessibility, localization

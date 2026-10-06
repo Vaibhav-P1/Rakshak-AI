@@ -2,17 +2,6 @@
 <issues format="6" by="lint 8.4.1" type="baseline" client="gradle" dependencies="false" name="AGP (8.4.1)" variant="all" version="8.4.1">
 
     <issue
-        id="InlinedApi"
-        message="Field requires API level 33 (current min is 26): `android.content.Context#RECEIVER_NOT_EXPORTED`"
-        errorLine1="        registerReceiver(sosReceiver, filter, Context.RECEIVER_NOT_EXPORTED)"
-        errorLine2="                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/safety/rakshak/MainActivity.kt"
-            line="68"
-            column="47"/>
-    </issue>
-
-    <issue
         id="OldTargetApi"
         message="Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details."
         errorLine1="        targetSdk = 34"
@@ -63,7 +52,7 @@
         errorLine2="                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/safety/rakshak/ui/HomeScreen.kt"
-            line="193"
+            line="196"
             column="38"/>
     </issue>
 
@@ -195,7 +184,7 @@
         errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="build.gradle.kts"
-            line="93"
+            line="94"
             column="32"/>
     </issue>
 
@@ -206,7 +195,7 @@
         errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="build.gradle.kts"
-            line="94"
+            line="95"
             column="32"/>
     </issue>
 
@@ -217,19 +206,8 @@
         errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="build.gradle.kts"
-            line="95"
+            line="96"
             column="31"/>
-    </issue>
-
-    <issue
-        id="UnsafeImplicitIntentLaunch"
-        message="The intent action `TRIGGER_SOS (used to send a broadcast)` matches the intent filter of a non-exported receiver, registered via a call to `Context.registerReceiver`, or similar. If you are trying to invoke this specific receiver via the action then you should use `Intent.setPackage(&lt;APPLICATION_ID>)`."
-        errorLine1="        sendBroadcast(Intent(ACTION_TRIGGER_SOS))"
-        errorLine2="                      ~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/safety/rakshak/service/VoiceGuardService.kt"
-            line="259"
-            column="23"/>
     </issue>
 
     <issue
@@ -239,41 +217,8 @@
         errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/safety/rakshak/ui/HomeScreen.kt"
-            line="227"
+            line="230"
             column="25"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; SDK_INT is always >= 26"
-        errorLine1="    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/safety/rakshak/ui/HomeScreen.kt"
-            line="482"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; SDK_INT is always >= 26"
-        errorLine1="        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/safety/rakshak/service/RakshakAccessibilityService.kt"
-            line="79"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; SDK_INT is always >= 26"
-        errorLine1="        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/safety/rakshak/service/SOSService.kt"
-            line="181"
-            column="13"/>
     </issue>
 
     <issue
@@ -301,33 +246,11 @@
     <issue
         id="ObsoleteSdkInt"
         message="Unnecessary; SDK_INT is always >= 26"
-        errorLine1="            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/safety/rakshak/widget/Soswidget.kt"
-            line="51"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; SDK_INT is always >= 26"
-        errorLine1="        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/safety/rakshak/service/VoiceGuardService.kt"
-            line="263"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; SDK_INT is always >= 26"
         errorLine1="        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/safety/rakshak/service/VoiceGuardService.kt"
-            line="293"
+            line="286"
             column="13"/>
     </issue>
 

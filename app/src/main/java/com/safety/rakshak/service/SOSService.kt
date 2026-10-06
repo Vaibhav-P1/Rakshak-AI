@@ -1,211 +1,204 @@
 package com.safety.rakshak.service
 
+import android.Manifest
 import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import android.util.Log
-import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
-import com.safety.rakshak.MainActivity
-import com.safety.rakshak.R
 import com.safety.rakshak.data.RakshakDatabase
-import com.safety.rakshak.utils.LocationHelper
-import com.safety.rakshak.utils.SMSHelper
+import com.safety.rakshak.sos.SosOrchestrator
+import com.safety.rakshak.sos.SosSource
+import com.safety.rakshak.sos.normalizePhoneNumber
+import com.safety.rakshak.sos.platform.SosPlatform
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 
+/**
+ * Runs the SOS pipeline ([SosOrchestrator]) as a foreground service.
+ *
+ * The service never aborts the SOS because of the foreground-service type: it
+ * tries the `location` type and falls back to `shortService` (Android 14+).
+ * If neither is allowed, it still runs the pipeline.
+ */
 class SOSService : Service() {
 
-    private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
-    private val mainHandler  = Handler(Looper.getMainLooper())
-    private lateinit var locationHelper: LocationHelper
-    private lateinit var smsHelper: SMSHelper
-    private lateinit var database: RakshakDatabase
-    private lateinit var notificationManager: NotificationManager
-    private var isRunning = false
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private lateinit var orchestrator: SosOrchestrator
+    private lateinit var notifications: SosNotifications
+
+    private var sosJob: Job? = null
+    private var runningWork = 0
 
     companion object {
-        private const val TAG                 = "SOSService"
-        private const val NOTIFICATION_ID     = 2001
-        private const val CHANNEL_ID          = "sos_channel"
-        private const val LOCATION_TIMEOUT_MS = 10_000L
-        private const val STOP_DELAY_MS       = 4_000L
-        const val ACTION_TRIGGER_SOS          = "TRIGGER_SOS"
+        private const val TAG = "SOSService"
+        const val ACTION_TRIGGER_SOS = "TRIGGER_SOS"
+        const val ACTION_SAFE = "com.safety.rakshak.action.SOS_SAFE"
+        const val EXTRA_SOURCE = "source"
+
+        /**
+         * Single entry point for every SOS trigger. Falls back to a plain
+         * startService if a foreground start is refused (e.g. from the background).
+         * Returns false only if the service could not be started at all.
+         */
+        fun trigger(context: Context, source: SosSource): Boolean {
+            val intent = Intent(context, SOSService::class.java)
+                .setAction(ACTION_TRIGGER_SOS)
+                .putExtra(EXTRA_SOURCE, source.name)
+            return try {
+                ContextCompat.startForegroundService(context, intent)
+                true
+            } catch (e: Exception) {
+                Log.w(TAG, "Foreground start refused (${e.javaClass.simpleName}); trying plain start")
+                try {
+                    context.startService(intent)
+                    true
+                } catch (e2: Exception) {
+                    Log.e(TAG, "Could not start SOS service: ${e2.javaClass.simpleName}")
+                    false
+                }
+            }
+        }
     }
 
     override fun onCreate() {
         super.onCreate()
-        notificationManager = getSystemService(NotificationManager::class.java)
-        createNotificationChannel()
-        locationHelper = LocationHelper(this)
-        smsHelper      = SMSHelper(this)
-        database       = RakshakDatabase.getDatabase(this)
+        orchestrator = SosPlatform.orchestrator(this)
+        notifications = SosNotifications(this).also { it.ensureChannel() }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_TRIGGER_SOS) {
-            if (!isRunning) {
-                isRunning = true
-                triggerSOS()
-            } else {
-                Log.d(TAG, "SOS already running — ignoring duplicate")
+        return when (intent?.action) {
+            ACTION_SAFE -> {
+                goForeground(notifications.progress("Telling your contacts you are safe..."))
+                handleSafe()
+                START_NOT_STICKY
+            }
+            ACTION_TRIGGER_SOS -> {
+                goForeground(notifications.progress("Sending emergency alert..."))
+                if (sosJob?.isActive == true) {
+                    Log.d(TAG, "SOS already running; duplicate trigger ignored")
+                } else {
+                    val source = intent.getStringExtra(EXTRA_SOURCE)
+                        ?.let { name -> SosSource.entries.firstOrNull { it.name == name } }
+                        ?: SosSource.APP_BUTTON
+                    startSos(source)
+                }
+                // If the process is killed mid-SOS, the system redelivers this intent
+                // and the orchestrator resumes the persisted session.
+                START_REDELIVER_INTENT
+            }
+            else -> {
+                goForeground(notifications.progress("Rakshak"))
+                finishIfIdle()
+                START_NOT_STICKY
             }
         }
-        return START_NOT_STICKY
     }
 
-    private fun triggerSOS() {
-        // Check location permission
-        if (ContextCompat.checkSelfPermission(
-                this, android.Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            Log.e(TAG, "Location permission not granted")
-            isRunning = false
-            stopSelf()
-            return
-        }
-
-        // Start foreground service
-        try {
-            val notification = buildNotification("SOS Triggered", "Sending emergency alerts...")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(NOTIFICATION_ID, notification,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
-            } else {
-                startForeground(NOTIFICATION_ID, notification)
-            }
-            Log.d(TAG, "Foreground started")
-        } catch (e: Exception) {
-            Log.e(TAG, "startForeground failed: ${e.message}")
-            isRunning = false
-            stopSelf()
-            return
-        }
-
-        // Run SOS flow
-        serviceScope.launch {
+    private fun startSos(source: SosSource) {
+        runningWork++
+        sosJob = scope.launch {
             try {
-                val contactsList = withContext(Dispatchers.IO) {
-                    database.emergencyContactDao().getAllContactsList()
-                }
-
-                if (contactsList.isEmpty()) {
-                    showNotification("SOS Error", "No emergency contacts found")
-                    scheduleStop()
-                    return@launch
-                }
-
-                showNotification("SOS Triggered", "Getting your location...")
-
-                val location = withTimeoutOrNull(LOCATION_TIMEOUT_MS) {
-                    withContext(Dispatchers.IO) { locationHelper.getCurrentLocation() }
-                }
-
-                showNotification("SOS Triggered",
-                    "Sending SMS to ${contactsList.size} contact${if (contactsList.size > 1) "s" else ""}...")
-
-                smsHelper.sendSOSMessage(
-                    contacts  = contactsList,
-                    latitude  = location?.latitude,
-                    longitude = location?.longitude,
-                    onSuccess = {
-                        mainHandler.post {
-                            showNotification("Alert Sent ✓",
-                                "SMS sent to ${contactsList.size} contact${if (contactsList.size > 1) "s" else ""}")
-                            scheduleStop()
-                        }
-                    },
-                    onError = { error ->
-                        mainHandler.post {
-                            showNotification("SOS Failed", error)
-                            scheduleStop()
-                        }
-                    }
-                )
+                val outcome = orchestrator.run(source) { notifications.updateProgress(it) }
+                notifications.showOutcome(outcome, contactNumbers())
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                Log.e(TAG, "SOS error: ${e.message}")
-                mainHandler.post {
-                    showNotification("SOS Failed", "Something went wrong")
-                    scheduleStop()
-                }
+                Log.e(TAG, "SOS pipeline error: ${e.javaClass.simpleName}")
+                notifications.showError()
+            } finally {
+                runningWork--
+                finishIfIdle()
             }
         }
     }
 
-    private fun showNotification(title: String, content: String) {
-        try {
-            notificationManager.notify(NOTIFICATION_ID, buildNotification(title, content))
-            Log.d(TAG, "Notification: $title")
-        } catch (e: Exception) {
-            Log.e(TAG, "showNotification: ${e.message}")
-        }
-    }
-
-    private fun buildNotification(title: String, content: String): Notification {
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0,
-            Intent(this, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText(content)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setAutoCancel(false)
-            // Force notification to show immediately even when app is in foreground
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .build()
-    }
-
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID, "SOS Alerts",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply { description = "Emergency SOS alert notifications" }
-            notificationManager.createNotificationChannel(channel)
-        }
-    }
-
-    private fun scheduleStop() {
-        mainHandler.postDelayed({
+    private fun handleSafe() {
+        val runningSos = sosJob
+        runningSos?.cancel()
+        runningWork++
+        scope.launch {
             try {
-                isRunning = false
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
-                Log.d(TAG, "Service stopped")
+                runningSos?.join()
+                notifications.showSafeOutcome(orchestrator.sendSafeMessage())
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                Log.e(TAG, "scheduleStop: ${e.message}")
+                Log.e(TAG, "Safe message error: ${e.javaClass.simpleName}")
+                notifications.showError()
+            } finally {
+                runningWork--
+                finishIfIdle()
             }
-        }, STOP_DELAY_MS)
+        }
+    }
+
+    private suspend fun contactNumbers(): List<String> = try {
+        RakshakDatabase.getDatabase(this).emergencyContactDao().getAllContactsList()
+            .mapNotNull { normalizePhoneNumber(it.phoneNumber) }
+    } catch (e: Exception) {
+        emptyList()
+    }
+
+    /** Tries each allowed foreground type in order. Returns false if none worked. */
+    private fun goForeground(notification: Notification): Boolean {
+        val types = buildList {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && hasAnyLocationPermission()) {
+                add(ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                add(ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE)
+            } else {
+                add(0) // Before Android 14: no runtime type check
+            }
+        }
+        for (type in types) {
+            try {
+                if (type == 0) startForeground(SosNotifications.PROGRESS_ID, notification)
+                else ServiceCompat.startForeground(this, SosNotifications.PROGRESS_ID, notification, type)
+                return true
+            } catch (e: Exception) {
+                Log.w(TAG, "startForeground(type=$type) refused: ${e.javaClass.simpleName}")
+            }
+        }
+        Log.e(TAG, "Running SOS without foreground status")
+        return false
+    }
+
+    private fun hasAnyLocationPermission(): Boolean =
+        listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+            .any { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
+
+    private fun finishIfIdle() {
+        if (runningWork > 0) return
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
+    /** Android 14+: a shortService has about 3 minutes. The SOS pipeline normally finishes well within that. */
+    override fun onTimeout(startId: Int) {
+        Log.w(TAG, "shortService time limit reached")
+        notifications.showTimeLimitReached()
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        scope.cancel()
         super.onDestroy()
-        isRunning = false
-        mainHandler.removeCallbacksAndMessages(null)
-        try { serviceScope.coroutineContext[Job]?.cancel() } catch (e: Exception) { }
     }
 }
