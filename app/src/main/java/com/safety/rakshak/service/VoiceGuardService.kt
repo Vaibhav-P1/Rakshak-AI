@@ -197,13 +197,12 @@ class VoiceGuardService : Service(), RecognitionListener {
         // Ignore partial results to avoid false SOS triggers.
     }
 
+    // Recognized speech is never logged: it is private conversation.
     override fun onResult(hypothesis: String?) {
-        Log.d(TAG, "Result: $hypothesis")
         checkForWakeWord(hypothesis)
     }
 
     override fun onFinalResult(hypothesis: String?) {
-        Log.d(TAG, "Final: $hypothesis")
         checkForWakeWord(hypothesis)
     }
 
@@ -232,8 +231,6 @@ class VoiceGuardService : Service(), RecognitionListener {
 
             if (text.isBlank()) return
 
-            Log.d(TAG, "Recognized: $text")
-
             val helpCount = text
                 .split(Regex("\\s+"))
                 .count { it == "help" }
@@ -250,7 +247,8 @@ class VoiceGuardService : Service(), RecognitionListener {
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "checkForWakeWord parse error: ${e.message}")
+            // Type only: a JSON exception message can quote the recognized text.
+            Log.e(TAG, "checkForWakeWord parse error: ${e.javaClass.simpleName}")
         }
     }
 

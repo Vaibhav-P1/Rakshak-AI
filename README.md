@@ -28,12 +28,12 @@
 - ✉️ **Single-part SMS** — Messages use GSM-7 text only (no emoji) and fit in one 160-character SMS
 - 👥 **Emergency Contacts** — Add contacts manually or pick them from your phone. Delete with confirmation (editing is not yet supported)
 - 🌙 **Dark UI** — Built with Jetpack Compose
-- 🔋 **Battery Optimization Banner** — Shown while Voice Guard is on, linking to system settings
+- 🔋 **Battery Optimization Banner** — Shown while Voice Guard is on, opening the system battery-optimization list (no special permission needed)
 - ♿ **Accessibility Setup Banner** — Guides you to enable Volume Guard
 
 ### Technical Highlights
 - ✅ Core SOS flow is offline — SMS + GPS, no network calls, no backend
-- ✅ No analytics or tracking SDKs
+- ✅ No analytics or tracking SDKs, and **no internet permission**: the app cannot send data off the device
 - ✅ All data stored locally (Room)
 - ✅ Foreground service types for Android 14: SOS uses `location`, with `shortService` as a fallback; Voice Guard uses `microphone`
 - ✅ SOS logic in a pure-Kotlin, unit-tested `SosOrchestrator`
@@ -46,8 +46,9 @@
 
 | Screen | Description |
 |--------|-------------|
-| Permission Screen | Lists required permissions with explanations; the app requires all of them before continuing |
-| Home Screen | SOS button, Voice Guard toggle, Volume Guard status, emergency contacts summary |
+| Introduction (first launch) | What the app does, emergency-services disclaimer and a privacy summary. Requests no permissions |
+| About and Privacy | What is stored and why, per feature. Reached from the (i) icon on Home |
+| Home Screen | SOS button, **Call 112**, Voice Guard toggle, Volume Guard status, setup banner, emergency contacts summary |
 | Contacts Screen | Add/delete emergency contacts, pick from phone contacts |
 
 ---
@@ -93,30 +94,27 @@ Or open the project in Android Studio and run the `app` configuration.
 
 | Permission | Purpose |
 |------------|---------|
-| `ACCESS_FINE_LOCATION` | GPS location for the SOS message |
-| `ACCESS_COARSE_LOCATION` | Approximate location |
-| `SEND_SMS` | Send emergency alerts to contacts |
-| `RECORD_AUDIO` | Microphone for Voice Guard |
-| `READ_CONTACTS` | Currently requested for the contact picker (planned for removal — the system picker doesn't need it) |
+| `SEND_SMS` | Send emergency alerts to contacts. **Required** for SOS |
+| `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` | Location in the SOS message. Optional: approximate is enough, and SOS still sends without it |
+| `POST_NOTIFICATIONS` | SOS progress/result notifications (Android 13+). Optional |
+| `RECORD_AUDIO` | Microphone for Voice Guard. Asked only when you turn Voice Guard on |
 | `FOREGROUND_SERVICE` | Run SOS and Voice Guard services |
 | `FOREGROUND_SERVICE_LOCATION` | Location foreground service type (Android 14) |
 | `FOREGROUND_SERVICE_MICROPHONE` | Microphone foreground service type (Android 14) |
-| `FOREGROUND_SERVICE_DATA_SYNC` | Not used by active code (planned for removal) |
-| `POST_NOTIFICATIONS` | Show SOS / service notifications (Android 13+) |
-| `WAKE_LOCK` | Keeps CPU awake for Voice Guard |
-| `INTERNET` | Not used by app code (planned for removal) |
-| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Battery optimization banner |
-| `BIND_ACCESSIBILITY_SERVICE` | Volume key SOS trigger (system binds the service) |
+| `WAKE_LOCK` | Keeps CPU awake for Voice Guard (to be reconsidered with the Voice Guard decision in Phase 3) |
+| `BIND_ACCESSIBILITY_SERVICE` | Volume key SOS trigger (system binds the service; enabled by the user in Settings) |
+
+Permissions are requested **in context, with an explanation first**, and the app never blocks on them. Removed in Phase 2: `READ_CONTACTS` (the system contact picker doesn't need it), `INTERNET`, `FOREGROUND_SERVICE_DATA_SYNC` and `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.
 
 ---
 
 ## 📖 User Guide
 
 ### Setting Up
-1. Open the app and grant the requested permissions
+1. Open the app. After a short introduction, a setup dialog explains each permission before Android asks. **Allow SMS** at minimum (required for SOS); location and notifications are recommended. You can return to this from the setup banner at any time. If a permission was blocked, the dialog offers **Open Settings**
 2. Go to Emergency Contacts → add at least one contact (include the country code, e.g. `+91`)
 3. For Volume Guard: tap the "Enable" banner → find Rakshak in Accessibility settings → enable it
-4. For Voice Guard: toggle it on from the home screen. If prompted, use the battery banner to allow background operation
+4. For Voice Guard: toggle it on. A disclosure explains the always-on microphone before Android asks for the permission. Use the battery banner to allow background operation
 
 ### SOS Triggers
 
@@ -142,7 +140,7 @@ Or open the project in Android Studio and run the `app` configuration.
 ```
 Rakshak/
 ├── .github/workflows/android-ci.yml     # CI: build, unit tests, lint
-├── docs/DEVELOPMENT_PROGRESS.md         # Phase-by-phase development log
+├── docs/PRIVACY_POLICY.md               # Draft privacy policy (owner to finalize and host)
 ├── app/
 │   ├── lint-baseline.xml                # Known lint issues (to be burned down)
 │   ├── src/main/
@@ -159,9 +157,8 @@ Rakshak/
 │   │   │   │   ├── SosNotifications.kt  # Progress + persistent result notifications
 │   │   │   │   ├── VoiceGuardService.kt
 │   │   │   │   ├── RakshakAccessibilityService.kt
-│   │   │   │   └── ShakeDetectorService.kt   # Experimental, NOT registered/active
 │   │   │   ├── ui/                      # HomeScreen, ContactsScreen, theme
-│   │   │   ├── utils/PermissionHelper.kt
+│   │   │   ├── permissions/             # In-context permission logic (pure core is unit-tested)
 │   │   │   ├── viewmodel/MainViewModel.kt
 │   │   │   ├── widget/Soswidget.kt      # SOSWidget
 │   │   │   └── MainActivity.kt          # Navigation + permission screen
@@ -205,7 +202,7 @@ These are documented in detail in [`RAKSHAK_PRODUCTION_AUDIT.md`](RAKSHAK_PRODUC
 
 - "Sent" means the **network accepted** the SMS. Delivery to the recipient's phone is not confirmed (no delivery reports yet)
 - If Android won't let the SOS run as a *location* foreground service (e.g. some background triggers on Android 14+), it runs as a short service. The SMS is still sent, but a fresh location is usually unavailable, so contacts get the last known location (labelled with its age) or "unavailable"
-- Choosing **"Approximate location"** on Android 12+ still keeps the app on the permission screen (the SOS pipeline itself supports approximate location; the permission screen is fixed in Phase 2)
+- The first-launch setup is a dialog on the Home screen. The Home layout is not yet scrollable or adaptive for very small screens (Phase 4)
 - Voice, Volume and Widget triggers have **no countdown/cancel** before sending (use "I'm safe" afterwards)
 - Dual-SIM: SMS uses the system's default SMS SIM
 - The emergency number in messages and the **Call 112** action is fixed to 112 (India)
@@ -243,8 +240,11 @@ These are documented in detail in [`RAKSHAK_PRODUCTION_AUDIT.md`](RAKSHAK_PRODUC
 ## 🔒 Privacy & Security
 
 - Emergency contacts are stored locally on the device (Room). They are included in Android's system backup
-- No analytics, no tracking SDKs, no backend servers
+- No analytics, no tracking SDKs, no backend servers, and **no internet permission**
 - Location is accessed only when SOS is triggered
+- Recognized speech is never logged, and microphone audio is processed on the device only. It is never recorded or sent
+- The widget receiver is not exported, so other apps cannot trigger an SOS through it
+- Draft privacy policy: [`docs/PRIVACY_POLICY.md`](docs/PRIVACY_POLICY.md) (contact details and hosting still to be filled in by the owner)
 - SMS is sent directly from the device SIM — no gateway or relay
 - No API keys or secrets are required to build
 
@@ -256,7 +256,7 @@ See section **S. Recommended Development Roadmap** in [`RAKSHAK_PRODUCTION_AUDIT
 
 - **Phase 0** — Repo hygiene & CI ✅
 - **Phase 1** — SOS reliability core ✅
-- **Phase 2** — Permissions, security, Play policy
+- **Phase 2** — Permissions, security, Play policy ✅
 - **Phase 3** — Trigger hardening (widget/volume countdown, Voice Guard decision, Quick Settings tile)
 - **Phase 4** — UI/UX polish, accessibility, localization
 - **Phase 5** — Platform upgrades & release engineering

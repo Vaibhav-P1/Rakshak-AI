@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Rakshak</string>
     <string name="sos_button">Emergency SOS</string>
     <string name="voice_guard">Voice Guard</string>
@@ -8,4 +8,71 @@
     <string name="listening">Listening for \'Help Rakshak\'</string>
     <string name="accessibility_service_description">Allows Rakshak to detect Volume Up + Down pressed together to trigger SOS emergency alert</string>
     <string name="sos_widget_description">Rakshak SOS — tap to send emergency alert</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">Welcome to Rakshak</string>
+    <string name="onboarding_subtitle">A personal safety tool that texts your trusted contacts when you need help.</string>
+    <string name="onboarding_how_title">How it works</string>
+    <string name="onboarding_how_1">You trigger SOS with the button, the widget, Volume Guard or Voice Guard.</string>
+    <string name="onboarding_how_2">Rakshak sends an SMS with your location to your emergency contacts.</string>
+    <string name="onboarding_how_3">Messages are sent from your phone\'s SIM, so your carrier\'s SMS charges may apply.</string>
+    <string name="disclaimer_title">Important</string>
+    <string name="disclaimer_body">Rakshak does not replace emergency services. If you are in danger, call 112 (or your local emergency number) first whenever you can. SMS can fail or be delayed if there is no signal, no SIM or no balance.</string>
+    <string name="privacy_short_title">Your privacy</string>
+    <string name="privacy_short_body">Your contacts stay on this phone. Rakshak has no account, no server, no analytics and no ads, and it cannot connect to the internet. Your location and messages are used only when you trigger SOS.</string>
+    <string name="onboarding_continue">Get started</string>
+    <string name="onboarding_details">Read the full privacy details</string>
+
+    <!-- Setup / permissions -->
+    <string name="setup_banner">Finish setup so SOS works\nTap to review permissions</string>
+    <string name="setup_banner_action">Review</string>
+    <string name="setup_title">Finish setting up</string>
+    <string name="setup_intro">Rakshak asks only for what it needs, and only uses it when you trigger SOS.</string>
+    <string name="setup_required_tag">Required</string>
+    <string name="setup_recommended_tag">Recommended</string>
+    <string name="perm_sms_title">Send SMS alerts</string>
+    <string name="perm_sms_why">Lets Rakshak text your emergency contacts from your SIM when you trigger SOS. Without it, SOS cannot send alerts.</string>
+    <string name="perm_location_title">Share your location</string>
+    <string name="perm_location_why">Adds a map link to your alert. Approximate location also works; precise is more accurate. Location is read only when you trigger SOS.</string>
+    <string name="perm_location_approx">Approximate location is on. Allow precise for a more accurate map link.</string>
+    <string name="perm_notifications_title">Show SOS status</string>
+    <string name="perm_notifications_why">Shows whether your alert was sent, and the \"I\'m safe\" button.</string>
+    <string name="perm_mic_title">Microphone for Voice Guard</string>
+    <string name="perm_status_allowed">Allowed</string>
+    <string name="perm_status_blocked">Blocked. Turn it on in Settings.</string>
+    <string name="action_allow">Allow</string>
+    <string name="action_allow_precise">Allow precise</string>
+    <string name="action_open_settings">Open Settings</string>
+    <string name="action_not_now">Not now</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_done">Done</string>
+    <string name="voice_disclosure_title">Voice Guard needs the microphone</string>
+    <!-- The wake phrase really is the word "help" three times, so ignore the repeated-word check. -->
+    <string name="voice_disclosure_body" tools:ignore="Typos">While Voice Guard is on, Rakshak keeps listening through the microphone in the background and shows a notification. It listens for \"help help help\" and sends an SOS when it hears it.\n\nAudio is processed on this phone only. It is not recorded, stored or sent anywhere. Listening uses extra battery.</string>
+    <string name="voice_active_hint">Say \"help\" three times</string>
+    <string name="voice_blocked_body">Microphone access is blocked for Rakshak. Turn it on in Settings to use Voice Guard.</string>
+
+    <!-- Home -->
+    <string name="call_112">Call 112</string>
+    <string name="home_disclaimer">Rakshak does not replace emergency services.</string>
+    <string name="about_open">About and privacy</string>
+
+    <!-- About -->
+    <string name="about_title">About and Privacy</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_section_data">What Rakshak stores</string>
+    <string name="about_data_body">Your emergency contacts (name and phone number) are stored on this phone. They may be included in your Android / Google backup. Rakshak also keeps the status of your most recent SOS (which contacts were alerted) so it can finish after an interruption.</string>
+    <string name="about_section_location">Location</string>
+    <string name="about_location_body">Read only when you trigger SOS, using Google Play services. It is sent only inside the SMS to your contacts.</string>
+    <string name="about_section_sms">SMS</string>
+    <string name="about_sms_body">Alerts are sent from your SIM straight to your contacts. Rakshak has no server and cannot read your other messages.</string>
+    <string name="about_section_mic">Microphone (Voice Guard, optional)</string>
+    <string name="about_mic_body">Used only while Voice Guard is on. Audio is processed on the phone and is never recorded or sent.</string>
+    <string name="about_section_access">Accessibility service (Volume Guard, optional)</string>
+    <string name="about_access_body">Used only to notice Volume Up and Volume Down pressed together. Rakshak does not read your screen.</string>
+    <string name="about_section_none">What Rakshak does not do</string>
+    <string name="about_none_body">No account, no analytics, no ads, and no data sent to the developer. The app does not request internet permission.</string>
+    <string name="about_section_disclaimer">Not a replacement for emergency services</string>
+    <string name="about_disclaimer_body">Rakshak is a helper, not a guarantee. SMS can fail or be delayed. If you are in danger, call 112 (or your local emergency number) first whenever you can.</string>
+    <string name="about_back">Back</string>
 </resources>

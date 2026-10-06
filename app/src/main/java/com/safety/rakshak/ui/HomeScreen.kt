@@ -1,6 +1,6 @@
 package com.safety.rakshak.ui
 
-import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -24,12 +24,21 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.core.content.edit
+import com.safety.rakshak.R
+import com.safety.rakshak.permissions.GrantState
+import com.safety.rakshak.permissions.PermissionTracker
+import com.safety.rakshak.permissions.SetupItem
+import com.safety.rakshak.permissions.locationPrecision
+import com.safety.rakshak.permissions.rememberPermissionRequester
+import com.safety.rakshak.permissions.state
 import com.safety.rakshak.service.SOSService
 import com.safety.rakshak.service.VoiceGuardService
 import com.safety.rakshak.sos.SosSource
@@ -52,7 +61,8 @@ private val TextMuted     = Color(0xFF3D4455)
 @Composable
 fun HomeScreen(
     viewModel: MainViewModel,
-    onNavigateToContacts: () -> Unit
+    onNavigateToContacts: () -> Unit,
+    onNavigateToAbout: () -> Unit,
 ) {
     val context        = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -65,13 +75,54 @@ fun HomeScreen(
     var isBatteryOptimized by remember { mutableStateOf(false) }
     var isAccessibilityOn  by remember { mutableStateOf(false) }
 
+    // ── Permissions: asked in context, never blocking the app ─────
+    val tracker = remember { PermissionTracker(context) }
+    val appPrefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
+    var permRefresh by remember { mutableIntStateOf(0) }
+    var showSetup by rememberSaveable { mutableStateOf(false) }
+    var showVoiceDisclosure by rememberSaveable { mutableStateOf(false) }
+    var pendingVoiceEnable by remember { mutableStateOf(false) }
+
+    val permStates = remember(permRefresh) { SetupItem.entries.associateWith { it.state(context, tracker) } }
+    val precision = remember(permRefresh) { locationPrecision(context) }
+    val smsGranted = permStates[SetupItem.SMS] == GrantState.GRANTED
+    val needsSetup = SetupItem.entries.any { it.inSetupList && permStates[it] != GrantState.GRANTED }
+
+    val setVoiceGuard: (Boolean) -> Unit = { enable ->
+        viewModel.setVoiceGuardActive(enable)
+        val intent = Intent(context, VoiceGuardService::class.java).apply {
+            action = if (enable) VoiceGuardService.ACTION_START_VOICE_GUARD
+            else VoiceGuardService.ACTION_STOP_VOICE_GUARD
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            context.startForegroundService(intent)
+        else
+            context.startService(intent)
+    }
+
+    val requester = rememberPermissionRequester {
+        permRefresh++
+        if (pendingVoiceEnable) {
+            pendingVoiceEnable = false
+            if (SetupItem.MICROPHONE.isGranted(context)) setVoiceGuard(true)
+        }
+    }
+
     val checkStates = {
         val pm = context.getSystemService(PowerManager::class.java)
         isBatteryOptimized = !pm.isIgnoringBatteryOptimizations(context.packageName)
         isAccessibilityOn  = isAccessibilityServiceEnabled(context)
+        permRefresh++ // permissions can change in system Settings while we are away
     }
 
-    LaunchedEffect(Unit) { checkStates() }
+    LaunchedEffect(Unit) {
+        checkStates()
+        // After the introduction, offer setup once so the user sees what is needed.
+        if (!appPrefs.getBoolean("setup_prompted", false)) {
+            appPrefs.edit { putBoolean("setup_prompted", true) }
+            if (needsSetup) showSetup = true
+        }
+    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -103,6 +154,29 @@ fun HomeScreen(
         animationSpec = infiniteRepeatable(tween(1400, 300, easing = FastOutSlowInEasing), RepeatMode.Restart),
         label = "r2a"
     )
+
+    if (showSetup) {
+        SetupDialog(
+            states = permStates,
+            locationPrecision = precision,
+            onAllow = { requester.request(it) },
+            onOpenSettings = requester.openSettings,
+            onDismiss = { showSetup = false },
+        )
+    }
+
+    if (showVoiceDisclosure) {
+        VoiceGuardDisclosureDialog(
+            blocked = permStates[SetupItem.MICROPHONE] == GrantState.NEEDS_SETTINGS,
+            onContinue = {
+                showVoiceDisclosure = false
+                pendingVoiceEnable = true
+                requester.request(SetupItem.MICROPHONE)
+            },
+            onOpenSettings = { showVoiceDisclosure = false; requester.openSettings() },
+            onDismiss = { showVoiceDisclosure = false },
+        )
+    }
 
     // SOS Countdown dialog
     if (showSOSDialog) {
@@ -178,11 +252,28 @@ fun HomeScreen(
                         fontWeight = FontWeight.Black, letterSpacing = (-0.5).sp)
                     Text("Your personal safety shield", color = TextSecondary, fontSize = 13.sp)
                 }
-                Box(modifier = Modifier.size(10.dp).clip(CircleShape)
-                    .background(if (contacts.isNotEmpty()) AccentGreen else TextMuted))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.size(10.dp).clip(CircleShape)
+                        .background(if (contacts.isNotEmpty()) AccentGreen else TextMuted))
+                    IconButton(onClick = onNavigateToAbout) {
+                        Icon(Icons.Default.Info, stringResource(R.string.about_open), tint = TextSecondary)
+                    }
+                }
             }
 
             Spacer(Modifier.height(8.dp))
+
+            // Permissions still missing (SMS is required for SOS to work)
+            if (needsSetup) {
+                WarningBanner(
+                    icon       = Icons.Default.Warning,
+                    message    = stringResource(R.string.setup_banner),
+                    buttonText = stringResource(R.string.setup_banner_action),
+                    color      = AccentOrange,
+                    onClick    = { showSetup = true }
+                )
+                Spacer(Modifier.height(10.dp))
+            }
 
             // Battery optimization warning
             if (isBatteryOptimized && isVoiceActive) {
@@ -192,10 +283,8 @@ fun HomeScreen(
                     buttonText = "Fix",
                     color = AccentOrange,
                     onClick = {
-                        context.startActivity(Intent(
-                            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                            Uri.parse("package:${context.packageName}")
-                        ))
+                        // Opens the system list (no special permission needed); the user picks Rakshak.
+                        context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
                     }
                 )
                 Spacer(Modifier.height(10.dp))
@@ -219,18 +308,15 @@ fun HomeScreen(
             GuardToggleCard(
                 icon     = Icons.Default.Mic,
                 title    = "Voice Guard",
-                subtitle = if (isVoiceActive) "Say 'Help Rakshak'" else "Tap to enable",
+                subtitle = if (isVoiceActive) stringResource(R.string.voice_active_hint) else "Tap to enable",
                 isActive = isVoiceActive,
                 onToggle = { checked ->
-                    viewModel.setVoiceGuardActive(checked)
-                    val intent = Intent(context, VoiceGuardService::class.java).apply {
-                        action = if (checked) VoiceGuardService.ACTION_START_VOICE_GUARD
-                        else VoiceGuardService.ACTION_STOP_VOICE_GUARD
+                    when {
+                        !checked -> setVoiceGuard(false)
+                        permStates[SetupItem.MICROPHONE] == GrantState.GRANTED -> setVoiceGuard(true)
+                        // Explain the always-on microphone BEFORE the system dialog.
+                        else -> showVoiceDisclosure = true
                     }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                        context.startForegroundService(intent)
-                    else
-                        context.startService(intent)
                 }
             )
 
@@ -246,21 +332,24 @@ fun HomeScreen(
             )
 
             // SOS Button
-            Box(
+            BoxWithConstraints(
                 contentAlignment = Alignment.Center,
                 modifier         = Modifier.weight(1f).fillMaxWidth()
             ) {
+                // Shrink on short screens instead of squashing into an oval. Leave room for the pulse rings.
+                val sosSize = minOf(220.dp, maxHeight - 24.dp, maxWidth - 48.dp).coerceAtLeast(120.dp)
                 if (contacts.isNotEmpty()) {
-                    Box(modifier = Modifier.size(220.dp)
+                    Box(modifier = Modifier.size(sosSize)
                         .graphicsLayer { scaleX = ring2Scale; scaleY = ring2Scale; alpha = ring2Alpha }
                         .clip(CircleShape).background(SOSRedGlow2))
-                    Box(modifier = Modifier.size(220.dp)
+                    Box(modifier = Modifier.size(sosSize)
                         .graphicsLayer { scaleX = ring1Scale; scaleY = ring1Scale; alpha = ring1Alpha }
                         .clip(CircleShape).background(SOSRedGlow))
                 }
                 Button(
-                    onClick   = { showSOSDialog = true },
-                    modifier  = Modifier.size(220.dp),
+                    // Without SMS permission SOS cannot send anything: guide the user instead.
+                    onClick   = { if (smsGranted) showSOSDialog = true else showSetup = true },
+                    modifier  = Modifier.size(sosSize),
                     shape     = CircleShape,
                     enabled   = contacts.isNotEmpty(),
                     colors    = ButtonDefaults.buttonColors(
@@ -288,6 +377,19 @@ fun HomeScreen(
                     }
                 }
             }
+
+            // Always-available way to reach emergency services (opens the dialer; no permission needed)
+            OutlinedButton(
+                onClick = { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:112"))) },
+                shape = RoundedCornerShape(14.dp),
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
+            ) {
+                Icon(Icons.Default.Call, null, tint = TextPrimary, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.call_112), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            }
+            Text(stringResource(R.string.home_disclaimer), color = TextSecondary, fontSize = 11.sp,
+                modifier = Modifier.padding(top = 4.dp, bottom = 10.dp))
 
             // No contacts warning
             if (contacts.isEmpty()) {
