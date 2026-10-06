@@ -1,11 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("kotlin-kapt")
     id("com.google.devtools.ksp") version "1.9.22-1.0.17"
-    // Add the Google services Gradle plugin
-    id("com.google.gms.google-services")
-
 }
 
 android {
@@ -47,6 +43,12 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"
     }
+    lint {
+        // Existing issues are recorded in the baseline (see RAKSHAK_PRODUCTION_AUDIT.md);
+        // CI fails on any new lint error. Shrink the baseline as issues are fixed.
+        baseline = file("lint-baseline.xml")
+        abortOnError = true
+    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -85,13 +87,7 @@ dependencies {
     
     // Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
-    
-    // WorkManager
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
-    
-    // DataStore
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
-    
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
@@ -100,18 +96,6 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
-
-    // Import the Firebase BoM
-    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
-
-
-    // TODO: Add the dependencies for Firebase products you want to use
-    // When using the BoM, don't specify versions in Firebase dependencies
-    implementation("com.google.firebase:firebase-analytics")
-
-
-    // Add the dependencies for any other desired Firebase products
-    // https://firebase.google.com/docs/android/setup#available-libraries
 
     //Vosk
     implementation("com.alphacephei:vosk-android:0.3.47")
