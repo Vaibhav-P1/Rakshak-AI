@@ -12,12 +12,15 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import com.safety.rakshak.R
 import com.safety.rakshak.data.RakshakDatabase
 import com.safety.rakshak.sos.CountdownResult
 import com.safety.rakshak.sos.CountdownState
 import com.safety.rakshak.sos.SosCountdown
 import com.safety.rakshak.sos.SosOrchestrator
+import com.safety.rakshak.sos.SafeOutcome
 import com.safety.rakshak.sos.SosRuntime
+import com.safety.rakshak.sos.toHistoryEntry
 import com.safety.rakshak.sos.SosSource
 import com.safety.rakshak.sos.normalizePhoneNumber
 import com.safety.rakshak.sos.platform.SosPlatform
@@ -89,7 +92,7 @@ class SOSService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return when (intent?.action) {
             ACTION_SAFE -> {
-                goForeground(notifications.progress("Telling your contacts you are safe..."))
+                goForeground(notifications.progress(getString(R.string.notif_progress_safe)))
                 handleSafe()
                 START_NOT_STICKY
             }
@@ -102,7 +105,7 @@ class SOSService : Service() {
                     // was already confirmed. A fresh trigger always gets one, even if a stale session exists.
                     val resuming = (flags and START_FLAG_REDELIVERY) != 0 && orchestrator.hasResumableSession()
                     goForeground(
-                        if (resuming) notifications.progress("Sending emergency alert...")
+                        if (resuming) notifications.progress(getString(R.string.notif_progress_sending))
                         else notifications.countdown(SosCountdown.DEFAULT_SECONDS)
                     )
                     val source = intent.getStringExtra(EXTRA_SOURCE)
@@ -122,7 +125,7 @@ class SOSService : Service() {
                 START_REDELIVER_INTENT
             }
             else -> {
-                goForeground(notifications.progress("Rakshak"))
+                goForeground(notifications.progress(getString(R.string.app_name)))
                 finishIfIdle()
                 START_NOT_STICKY
             }
@@ -137,9 +140,11 @@ class SOSService : Service() {
                     Log.d(TAG, "SOS cancelled during the countdown; nothing was sent")
                     return@launch
                 }
-                notifications.notify(SosNotifications.PROGRESS_ID, notifications.progress("Sending emergency alert..."))
+                notifications.notify(SosNotifications.PROGRESS_ID, notifications.progress(getString(R.string.notif_progress_sending)))
                 val outcome = orchestrator.run(source) { notifications.updateProgress(it) }
-                notifications.showOutcome(outcome, contactNumbers())
+                // A real SOS run is recorded (no numbers, no coordinates). Cancelled countdowns and test alerts never are.
+                SosPlatform.history(this@SOSService).add(outcome.toHistoryEntry(source, System.currentTimeMillis()))
+                notifications.showOutcome(outcome, contactNumbers(), primaryContact())
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -176,7 +181,9 @@ class SOSService : Service() {
         scope.launch {
             try {
                 runningSos?.join()
-                notifications.showSafeOutcome(orchestrator.sendSafeMessage())
+                val safe = orchestrator.sendSafeMessage()
+                if (safe is SafeOutcome.Sent) SosPlatform.history(this@SOSService).markLatestSafe()
+                notifications.showSafeOutcome(safe)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -194,6 +201,13 @@ class SOSService : Service() {
             .mapNotNull { normalizePhoneNumber(it.phoneNumber) }
     } catch (e: Exception) {
         emptyList()
+    }
+
+    private suspend fun primaryContact(): PrimaryContact? = try {
+        RakshakDatabase.getDatabase(this).emergencyContactDao().getPrimary()
+            ?.let { PrimaryContact(it.name, it.phoneNumber) }
+    } catch (e: Exception) {
+        null
     }
 
     /** Tries each allowed foreground type in order. Returns false if none worked. */

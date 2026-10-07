@@ -27,8 +27,12 @@ Every trigger starts the **same 3-second countdown** with **Cancel** and **Send 
 - 🔔 **Persistent result notification** — Shows exactly what happened and stays until dismissed. It has an **"I'm safe"** action that tells alerted contacts to stand down. On failure it offers **Call 112** and **Open SMS app**
 - 💾 **Survives process death** — SOS progress is saved. If Android kills the app mid-SOS, the service restarts and resumes without re-alerting contacts who already got the SMS
 - ✉️ **Single-part SMS** — Messages use GSM-7 text only (no emoji) and fit in one 160-character SMS
-- 👥 **Emergency Contacts** — Add contacts manually or pick them from your phone. Delete with confirmation (editing is not yet supported)
-- 🌙 **Dark UI** — Built with Jetpack Compose
+- 👥 **Emergency Contacts** — Add manually or pick from your phone (no contacts permission), edit, delete with confirmation. Numbers are validated (7-15 digits), exact duplicates are blocked, likely duplicates and a missing country code get a warning, and there is a **cap of 5**. One contact can be the **primary**: shown first with a star and the word "Primary", one tap from the dialer on Home ("Call <name>") and on the SOS failure notification. If the primary is deleted, the next contact takes over
+- 🧪 **Send test alert** — From a contact's menu, after explicit confirmation, sends one clearly labelled test SMS to that contact only. It is completely separate from SOS: no countdown, no session, nothing in SOS history, no SOS notification; it reports its own result
+- 🕘 **SOS history** — The last 20 real SOS events (time, trigger, how many contacts were reached, location status, "marked safe"), with a "Last SOS" card on Home. It stores **no phone numbers and no coordinates**, stays on the phone, is not backed up, and can be cleared
+- 🎨 **Light and dark themes** — One semantic palette; every text pair is at least 4.5:1 and meaningful graphics at least 3:1, enforced by unit tests. Edge-to-edge, scrollable and responsive (small screens, large fonts, landscape), 48 dp touch targets, TalkBack labels, reduced-motion aware
+- 🌐 **English and Hindi** — Per-app language (Android 13+). The SMS alerts themselves stay English and GSM-7
+- 🛡️ **Rakshak brand** — Shield-R mark: adaptive and themed launcher icon, splash, notification and tile glyphs, widget, in-app logo (sources in `docs/branding/`)
 - ♿ **Accessibility Setup Banner** — Guides you to enable Volume Guard
 
 ### Technical Highlights
@@ -48,8 +52,9 @@ Every trigger starts the **same 3-second countdown** with **Cancel** and **Send 
 |--------|-------------|
 | Introduction (first launch) | What the app does, emergency-services disclaimer and a privacy summary. Requests no permissions |
 | About and Privacy | What is stored and why, per feature. Reached from the (i) icon on Home |
-| Home Screen | SOS button, **Call 112**, Volume Guard status, add-tile prompt, setup banner, emergency contacts summary |
-| Contacts Screen | Add/delete emergency contacts, pick from phone contacts |
+| Home Screen | SOS button (first, always reachable), **Call 112**, **Call <primary>**, setup and Volume Guard banners, add-tile prompt, Last SOS card, emergency contacts summary. Scrolls |
+| Contacts Screen | Add (manual or from phone contacts), edit, primary contact, test alert, delete. 5-contact cap |
+| SOS History | The last 20 real SOS events, no numbers or coordinates, clear button |
 
 ---
 
@@ -141,6 +146,7 @@ Permissions are requested **in context, with an explanation first**, and the app
 Rakshak/
 ├── .github/workflows/android-ci.yml     # CI: build, unit tests, lint
 ├── docs/PRIVACY_POLICY.md               # Draft privacy policy (owner to finalize and host)
+├── docs/branding/                       # Master SVGs and how the mark is used
 ├── app/
 │   ├── lint-baseline.xml                # Known lint issues (to be burned down)
 │   ├── src/main/
@@ -149,6 +155,8 @@ Rakshak/
 │   │   │   ├── sos/                     # SOS pipeline (pure Kotlin, unit-tested)
 │   │   │   │   ├── SosOrchestrator.kt   # Send → locate → follow-up → persist
 │   │   │   │   ├── SosCountdown.kt      # The one 3-second countdown every trigger uses
+│   │   │   │   ├── SosHistory.kt        # Last-20 history model, codec and log (no numbers/coordinates)
+│   │   │   │   ├── TestAlertSender.kt   # Test SMS to one contact: no session, history or countdown
 │   │   │   │   ├── VolumeChordDetector.kt  # Volume Up + Down logic (unit-tested)
 │   │   │   │   ├── SosMessages.kt       # GSM-7, single-part SMS texts
 │   │   │   │   ├── SosModels.kt / SosPorts.kt / SosSessionCodec.kt
@@ -158,12 +166,14 @@ Rakshak/
 │   │   │   │   ├── SosNotifications.kt  # Progress + persistent result notifications
 │   │   │   │   ├── RakshakAccessibilityService.kt   # Volume Guard (key events only)
 │   │   │   │   ├── SosTileService.kt                # Quick Settings tile
-│   │   │   ├── ui/                      # HomeScreen, ContactsScreen, theme
+│   │   │   ├── contacts/ContactRules.kt # Validation, duplicates, cap of 5, primary rules (pure, unit-tested)
+│   │   │   ├── ui/                      # Home, Contacts, History, About, Onboarding, BrandMark, CardSurface
+│   │   │   │   └── theme/               # RakshakPalette (light/dark roles, contrast-tested), Theme, colour roles
 │   │   │   ├── permissions/             # In-context permission logic (pure core is unit-tested)
 │   │   │   ├── viewmodel/MainViewModel.kt
 │   │   │   ├── widget/Soswidget.kt      # SOSWidget
 │   │   │   └── MainActivity.kt          # Navigation + permission screen
-│   │   ├── res/
+│   │   ├── res/                         # values/ (English), values-hi/ (Hindi), values-night/, drawables, widget
 │   │   └── AndroidManifest.xml
 │   ├── src/test/                        # JVM unit tests (SOS pipeline, messages, codec)
 │   ├── src/androidTest/                 # On-device tests (SMS gateway, service end-to-end)
@@ -179,6 +189,12 @@ Rakshak/
 ### SOS countdown duration
 Edit `DEFAULT_SECONDS` in `sos/SosCountdown.kt`. It applies to every trigger.
 
+### Contact limit and rules
+Edit `ContactRules` in `contacts/ContactRules.kt` (`MAX_CONTACTS`, digit limits). `ContactRulesTest` covers them.
+
+### Colours
+Edit `ui/theme/RakshakPalette.kt` (one definition per role per mode). `ContrastTest` fails if a pair drops below 4.5:1 (text) or 3:1 (graphics); `UiGuardsTest` fails on colour literals outside the theme package.
+
 ### SMS messages
 Edit `sos/SosMessages.kt`. Keep messages GSM-7 only and at most 160 characters; `SosMessagesTest` enforces both.
 
@@ -193,13 +209,14 @@ These are documented in detail in [`RAKSHAK_PRODUCTION_AUDIT.md`](RAKSHAK_PRODUC
 
 - "Sent" means the **network accepted** the SMS. Delivery to the recipient's phone is not confirmed (no delivery reports yet)
 - If Android won't let the SOS run as a *location* foreground service (e.g. some background triggers on Android 14+), it runs as a short service. The SMS is still sent, but a fresh location is usually unavailable, so contacts get the last known location (labelled with its age) or "unavailable"
-- The first-launch setup is a dialog on the Home screen. The Home layout is not yet scrollable or adaptive for very small screens (Phase 4)
+- Adding your **own** number as a contact is not checked: Android only exposes it through READ_PHONE_STATE / READ_PHONE_NUMBERS, which the app deliberately does not hold, and many SIMs store no number. The Add dialog only says not to add your own number
+- The Hindi text was written by the developer assistant and needs a native speaker's review before release; SMS alerts stay English
 - The countdown is cancelled from the notification or the dialog. On the lock screen, Android may require unlocking before it runs a Quick Settings tile
 - Dual-SIM: SMS uses the system's default SMS SIM
 - The emergency number in messages and the **Call 112** action is fixed to 112 (India)
 - Volume Guard may not work on the lock screen on some OEM builds (e.g. OxygenOS). The accessibility config was trimmed to key events only in Phase 3; verify on the target phones (see `docs/PHASE3_DEVICE_TEST.md`)
 - Not yet compliant with current Google Play target-SDK requirements (Phase 5)
-- Automated tests cover the SOS pipeline, the countdown and the volume-key logic. UI, the service and the tile have no automated tests yet
+- Automated tests cover the SOS pipeline, countdown, volume-key logic, contact rules, test alert, history, colour contrast, strings parity and branding guards (JVM), plus Room transactions and the SMS gateway on a device. Compose UI, the service and the tile have no automated UI tests yet
 
 ---
 
@@ -248,7 +265,7 @@ See section **S. Recommended Development Roadmap** in [`RAKSHAK_PRODUCTION_AUDIT
 - **Phase 1** — SOS reliability core ✅
 - **Phase 2** — Permissions, security, Play policy ✅
 - **Phase 3** — Trigger hardening: one countdown for every trigger, trimmed Volume Guard, Quick Settings tile, Voice Guard removed ✅ (physical-device check pending)
-- **Phase 4** — UI/UX polish, accessibility, localization
+- **Phase 4** — UI/UX polish: Shield-R brand, light/dark, edge-to-edge, Hindi, contacts (edit, primary, validation, cap), test alert, SOS history ✅ (physical-device check pending, see `docs/PHASE4_DEVICE_TEST.md`)
 - **Phase 5** — Platform upgrades & release engineering
 - **Phase 6–7** — Closed testing → Play Store production
 

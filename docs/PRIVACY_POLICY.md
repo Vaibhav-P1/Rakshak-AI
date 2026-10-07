@@ -18,10 +18,12 @@ Rakshak is a personal safety app. When you trigger SOS (with the app button, the
 
 | Information | Why | Where it goes |
 |---|---|---|
-| **Emergency contacts** (name and phone number you enter or pick) | To know whom to alert | Stored on your phone. Android may include them in your device backup (Google backup), if you have backup turned on |
+| **Emergency contacts** (name and phone number you enter or pick, and which one you marked primary) | To know whom to alert, and whom to offer a one-tap call to | Stored on your phone. Android may include them in your device backup (Google backup), if you have backup turned on |
 | **Your location** | To add a map link to your alert | Read only when you trigger SOS, using Google Play services. It is placed in the SMS sent to your contacts. Rakshak does not store location history |
 | **SMS messages you send through the app** | The SOS alert, the location follow-up and "I'm safe" | Sent from your SIM to your contacts through your mobile carrier. Your carrier's own terms apply, and normal SMS charges may apply |
 | **Status of your most recent SOS** (which contacts were alerted, and whether it succeeded) | To finish an SOS if the app is interrupted, and to show you the result | Stored on your phone only; replaced by the next SOS; **not** included in backups |
+| **SOS history** (when an SOS ran, what started it, how many contacts were reached, whether location was shared, and whether you sent "I'm safe") | To show you what happened | Stored on your phone only. At most the last 20 events. It holds **no phone numbers and no coordinates**, is **not** included in backups, and you can clear it any time in the app. Test messages and cancelled countdowns are never recorded |
+| **Test message** (only when you choose "Send test alert" for one contact and confirm) | To check that a contact's number works | One SMS from your SIM to that contact, saying it is only a test. It is not an SOS and is not recorded in the SOS history |
 | **Volume button presses** (only if you turn on the Volume Guard accessibility service) | To notice Volume Up and Volume Down pressed together, then start the SOS countdown | Used on the phone only. The service watches only those two keys. Rakshak does not read your screen, other apps or what you type |
 
 ## Permissions and why they are requested

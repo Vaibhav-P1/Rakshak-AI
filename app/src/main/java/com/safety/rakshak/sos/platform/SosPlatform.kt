@@ -5,6 +5,9 @@ import androidx.core.content.edit
 import com.safety.rakshak.data.EmergencyContactDao
 import com.safety.rakshak.data.RakshakDatabase
 import com.safety.rakshak.sos.ContactsSource
+import com.safety.rakshak.sos.HistoryStorage
+import com.safety.rakshak.sos.SosHistoryLog
+import com.safety.rakshak.sos.TestAlertSender
 import com.safety.rakshak.sos.SessionStore
 import com.safety.rakshak.sos.SosClock
 import com.safety.rakshak.sos.SosContact
@@ -44,7 +47,25 @@ class PrefsSessionStore(context: Context) : SessionStore {
     }
 }
 
+/**
+ * The SOS history text, in a private preferences file. Like `sos_session` it is NOT in the backup
+ * rules (they include only the database), so it never leaves the phone.
+ */
+class PrefsHistoryStorage(context: Context) : HistoryStorage {
+    private val prefs = context.applicationContext.getSharedPreferences("sos_history", Context.MODE_PRIVATE)
+    override fun read(): String = prefs.getString("log", "") ?: ""
+    override fun write(text: String) {
+        prefs.edit(commit = true) { putString("log", text) }
+    }
+}
+
 object SosPlatform {
+    fun history(context: Context): SosHistoryLog = SosHistoryLog(PrefsHistoryStorage(context))
+
+    /** Separate from [orchestrator]: no session store, no history, no countdown. */
+    fun testAlertSender(context: Context): TestAlertSender =
+        TestAlertSender(AndroidSmsGateway(context.applicationContext), SosMessages(ZoneId.systemDefault()))
+
     fun orchestrator(context: Context): SosOrchestrator {
         val app = context.applicationContext
         return SosOrchestrator(

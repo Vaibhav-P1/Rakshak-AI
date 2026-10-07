@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -8,18 +9,34 @@
     android:background="@drawable/widget_background"
     android:padding="16dp">
 
-    <!-- App name -->
-    <TextView
-        android:id="@+id/widget_app_name"
+    <!-- Brand: the Rakshak mark and wordmark. The card is a fixed dark surface; all colours come from colors.xml. -->
+    <!-- Not a compound drawable: the mark needs its own 20dp size, and RemoteViews cannot size a compound drawable. -->
+    <LinearLayout
+        tools:ignore="UseCompoundDrawables"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/widget_app_name"
-        android:textColor="#F0F2F8"
-        android:textSize="11sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.15"
-        android:alpha="0.5"
-        android:layout_marginBottom="10dp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="10dp">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_logo_mark"
+            android:tint="@color/brand_red"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:id="@+id/widget_app_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="@string/widget_app_name"
+            android:textColor="@color/widget_text_primary"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.12" />
+    </LinearLayout>
 
     <!-- SOS Button -->
     <Button
@@ -27,7 +44,7 @@
         android:layout_width="match_parent"
         android:layout_height="64dp"
         android:text="@string/widget_sos_label"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/widget_button_text"
         android:textSize="28sp"
         android:textStyle="bold"
         android:letterSpacing="0.15"
@@ -40,7 +57,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/widget_loading"
-        android:textColor="#6B7280"
+        android:textColor="@color/widget_text_secondary"
         android:textSize="12sp"
         android:gravity="center" />
 

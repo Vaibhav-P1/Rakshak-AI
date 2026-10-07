@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import androidx.annotation.PluralsRes
+import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import com.safety.rakshak.MainActivity
 import com.safety.rakshak.R
@@ -23,19 +25,26 @@ import com.safety.rakshak.sos.SosProgress
  *  - The result notification is separate and stays until the user dismisses it,
  *    so a failure is never hidden.
  */
+/** The primary contact, for the "Call <name>" shortcut on result notifications. */
+data class PrimaryContact(val name: String, val number: String)
+
 class SosNotifications(private val context: Context) {
 
     private val manager = context.getSystemService(NotificationManager::class.java)
 
+    private fun str(@StringRes id: Int, vararg args: Any) = context.getString(id, *args)
+    private fun count(@PluralsRes id: Int, n: Int, vararg args: Any) =
+        context.resources.getQuantityString(id, n, *args)
+
     fun ensureChannel() {
-        val channel = NotificationChannel(CHANNEL_ID, "SOS Alerts", NotificationManager.IMPORTANCE_HIGH)
-            .apply { description = "Emergency SOS progress and results" }
+        val channel = NotificationChannel(CHANNEL_ID, str(R.string.notif_channel_sos), NotificationManager.IMPORTANCE_HIGH)
+            .apply { description = str(R.string.notif_channel_sos_desc) }
         manager.createNotificationChannel(channel)
         // Heads-up and a short vibration so the countdown is noticed, but no sound.
         val countdownChannel = NotificationChannel(
-            COUNTDOWN_CHANNEL_ID, "SOS countdown", NotificationManager.IMPORTANCE_HIGH
+            COUNTDOWN_CHANNEL_ID, str(R.string.notif_channel_countdown), NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "The few seconds before an SOS is sent, with a Cancel button"
+            description = str(R.string.notif_channel_countdown_desc)
             enableVibration(true)
             vibrationPattern = longArrayOf(0, 250, 120, 250)
             setSound(null, null)
@@ -49,9 +58,9 @@ class SosNotifications(private val context: Context) {
      */
     fun countdown(secondsLeft: Int): Notification =
         NotificationCompat.Builder(context, COUNTDOWN_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(context.getString(R.string.countdown_title, secondsLeft))
-            .setContentText(context.getString(R.string.countdown_text))
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(str(R.string.countdown_title, secondsLeft))
+            .setContentText(str(R.string.countdown_text))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -59,70 +68,74 @@ class SosNotifications(private val context: Context) {
             .setOnlyAlertOnce(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setContentIntent(openAppAction())
-            .addAction(0, context.getString(R.string.countdown_cancel), serviceAction(SOSService.ACTION_CANCEL_COUNTDOWN, REQUEST_CANCEL))
-            .addAction(0, context.getString(R.string.countdown_send_now), serviceAction(SOSService.ACTION_SEND_NOW, REQUEST_SEND_NOW))
+            .addAction(0, str(R.string.countdown_cancel), serviceAction(SOSService.ACTION_CANCEL_COUNTDOWN, REQUEST_CANCEL))
+            .addAction(0, str(R.string.countdown_send_now), serviceAction(SOSService.ACTION_SEND_NOW, REQUEST_SEND_NOW))
             .build()
 
     fun progress(text: String): Notification =
-        base("SOS in progress", text)
+        base(str(R.string.notif_progress_title), text)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .addAction(0, "I'm safe", safeAction())
+            .addAction(0, str(R.string.notif_action_safe), safeAction())
             .build()
 
     fun updateProgress(progress: SosProgress) {
         val text = when (progress) {
             is SosProgress.SendingAlert ->
-                "Sending alert to ${plural(progress.contactCount, "contact")}..."
+                count(R.plurals.notif_progress_sending_contacts, progress.contactCount, progress.contactCount)
             is SosProgress.AlertDispatched ->
-                "Alert: ${progress.sent} sent, ${progress.unconfirmed} unconfirmed, ${progress.failed} failed"
-            SosProgress.WaitingForLocation -> "Alert sent. Getting your location..."
-            SosProgress.SendingLocation -> "Sending your location to contacts..."
+                str(R.string.notif_progress_dispatched, progress.sent, progress.unconfirmed, progress.failed)
+            SosProgress.WaitingForLocation -> str(R.string.notif_progress_waiting_location)
+            SosProgress.SendingLocation -> str(R.string.notif_progress_sending_location)
         }
         notify(PROGRESS_ID, progress(text))
     }
 
-    fun showOutcome(outcome: SosOutcome, contactNumbers: List<String>) {
-        val callAndSms = listOf(
-            "Call 112" to dialEmergencyAction(),
-            "Open SMS app" to smsAppAction(contactNumbers),
-        )
+    fun showOutcome(outcome: SosOutcome, contactNumbers: List<String>, primary: PrimaryContact? = null) {
+        // Only adds a shortcut to the dialer; every contact was already alerted (or tried) by the pipeline.
+        val call112 = str(R.string.call_112) to dialEmergencyAction()
+        val callPrimary = primary?.let { listOf(str(R.string.notification_call_contact, it.name) to dialAction(it.number)) }.orEmpty()
+        val callAndSms = listOf(call112, str(R.string.notif_action_open_sms) to smsAppAction(contactNumbers)) + callPrimary
         when (outcome) {
             SosOutcome.NoContacts -> result(
-                "SOS NOT SENT",
-                "You have no emergency contacts. Open Rakshak to add them.",
-                listOf("Call 112" to dialEmergencyAction()),
+                str(R.string.notif_not_sent_title),
+                str(R.string.notif_no_contacts),
+                listOf(call112),
             )
 
             is SosOutcome.SmsUnavailable -> result(
-                "SOS NOT SENT",
+                str(R.string.notif_not_sent_title),
                 when (outcome.reason) {
-                    SmsAvailability.NO_PERMISSION -> "SMS permission is turned off for Rakshak."
-                    SmsAvailability.NO_SIM -> "No SIM card detected. SMS cannot be sent."
-                    SmsAvailability.NO_TELEPHONY -> "This device cannot send SMS."
-                    SmsAvailability.READY -> "SMS could not be sent."
+                    SmsAvailability.NO_PERMISSION -> str(R.string.notif_sms_no_permission)
+                    SmsAvailability.NO_SIM -> str(R.string.notif_sms_no_sim)
+                    SmsAvailability.NO_TELEPHONY -> str(R.string.notif_sms_no_telephony)
+                    SmsAvailability.READY -> str(R.string.notif_sms_unknown)
                 },
-                if (outcome.reason == SmsAvailability.NO_PERMISSION) callAndSms
-                else listOf("Call 112" to dialEmergencyAction()),
+                if (outcome.reason == SmsAvailability.NO_PERMISSION) callAndSms else listOf(call112) + callPrimary,
             )
 
             is SosOutcome.Dispatched -> {
                 val total = outcome.sent + outcome.unconfirmed + outcome.failed
                 if (!outcome.anyReached) {
-                    result("SOS FAILED", "No SMS could be sent to your ${plural(total, "contact")}.", callAndSms)
+                    result(str(R.string.notif_failed_title), count(R.plurals.notif_failed_none_sent, total, total), callAndSms)
                     return
                 }
                 val summary = buildString {
-                    append("Sent to ${outcome.sent} of ${plural(total, "contact")}.")
-                    if (outcome.unconfirmed > 0) append(" ${outcome.unconfirmed} not confirmed by the network.")
-                    if (outcome.failed > 0) append(" ${outcome.failed} failed.")
+                    append(count(R.plurals.notif_summary_sent, total, outcome.sent, total))
+                    if (outcome.unconfirmed > 0) append(" ").append(str(R.string.notif_summary_unconfirmed, outcome.unconfirmed))
+                    if (outcome.failed > 0) append(" ").append(str(R.string.notif_summary_failed, outcome.failed))
                     append(" ").append(locationLine(outcome.location))
                 }
-                val title = if (outcome.failed == 0 && outcome.unconfirmed == 0) "SOS alert sent" else "SOS partly sent"
+                val title = str(
+                    if (outcome.failed == 0 && outcome.unconfirmed == 0) R.string.notif_sent_title else R.string.notif_partly_title
+                )
                 val actions = buildList {
-                    add("I'm safe" to safeAction())
-                    if (outcome.failed > 0 || outcome.unconfirmed > 0) add("Call 112" to dialEmergencyAction())
+                    add(str(R.string.notif_action_safe) to safeAction())
+                    if (outcome.failed > 0 || outcome.unconfirmed > 0) {
+                        add(call112)
+                        addAll(callPrimary)
+                    }
                 }
                 result(title, summary, actions)
             }
@@ -131,34 +144,37 @@ class SosNotifications(private val context: Context) {
 
     fun showSafeOutcome(outcome: SafeOutcome) {
         when (outcome) {
-            is SafeOutcome.Sent -> result(
-                "\"I'm safe\" sent",
-                "Told ${plural(outcome.sent + outcome.unconfirmed, "contact")} you are safe." +
-                    if (outcome.failed > 0) " ${outcome.failed} failed." else "",
-                emptyList(),
-            )
+            is SafeOutcome.Sent -> {
+                val told = outcome.sent + outcome.unconfirmed
+                result(
+                    str(R.string.notif_safe_sent_title),
+                    count(R.plurals.notif_safe_sent_body, told, told) +
+                        if (outcome.failed > 0) " " + str(R.string.notif_summary_failed, outcome.failed) else "",
+                    emptyList(),
+                )
+            }
             is SafeOutcome.SmsUnavailable -> result(
-                "\"I'm safe\" NOT sent",
-                "SMS is unavailable. Please contact your emergency contacts directly.",
+                str(R.string.notif_safe_unavailable_title),
+                str(R.string.notif_safe_unavailable_body),
                 emptyList(),
             )
             SafeOutcome.NoOneAlerted, SafeOutcome.NoSession -> result(
-                "SOS stopped", "No contacts had been alerted.", emptyList()
+                str(R.string.notif_stopped_title), str(R.string.notif_stopped_body), emptyList()
             )
             SafeOutcome.AlreadySent -> Unit
         }
     }
 
     fun showError() = result(
-        "SOS FAILED",
-        "Something went wrong while sending the alert.",
-        listOf("Call 112" to dialEmergencyAction()),
+        str(R.string.notif_failed_title),
+        str(R.string.notif_error_body),
+        listOf(str(R.string.call_112) to dialEmergencyAction()),
     )
 
     fun showTimeLimitReached() = result(
-        "SOS stopped by the system",
-        "Android ended the SOS service early. Check that your contacts received the alert.",
-        listOf("Call 112" to dialEmergencyAction()),
+        str(R.string.notif_timelimit_title),
+        str(R.string.notif_timelimit_body),
+        listOf(str(R.string.call_112) to dialEmergencyAction()),
     )
 
     fun notify(id: Int, notification: Notification) {
@@ -179,7 +195,7 @@ class SosNotifications(private val context: Context) {
 
     private fun base(title: String, text: String) =
         NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_MAX)
@@ -187,10 +203,10 @@ class SosNotifications(private val context: Context) {
             .setContentIntent(openAppAction())
 
     private fun locationLine(report: LocationReport) = when (report) {
-        LocationReport.CURRENT -> "Location shared."
-        LocationReport.LAST_KNOWN_STALE -> "Only an old location was available and was sent."
-        LocationReport.NO_PERMISSION -> "Location not shared (permission off)."
-        LocationReport.UNAVAILABLE -> "Location could not be determined."
+        LocationReport.CURRENT -> str(R.string.notif_loc_current)
+        LocationReport.LAST_KNOWN_STALE -> str(R.string.notif_loc_stale)
+        LocationReport.NO_PERMISSION -> str(R.string.notif_loc_no_permission)
+        LocationReport.UNAVAILABLE -> str(R.string.notif_loc_unavailable)
     }
 
     private fun safeAction(): PendingIntent = PendingIntent.getForegroundService(
@@ -217,15 +233,19 @@ class SosNotifications(private val context: Context) {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     )
 
-    private fun smsAppAction(numbers: List<String>): PendingIntent = PendingIntent.getActivity(
-        context, REQUEST_SMS_APP,
-        Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + numbers.joinToString(";")))
-            .putExtra("sms_body", "SOS! I need help. Please call me or 112.")
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+    private fun dialAction(number: String): PendingIntent = PendingIntent.getActivity(
+        context, REQUEST_CALL_PRIMARY,
+        Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(number))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     )
 
-    private fun plural(count: Int, noun: String) = "$count $noun${if (count == 1) "" else "s"}"
+    private fun smsAppAction(numbers: List<String>): PendingIntent = PendingIntent.getActivity(
+        context, REQUEST_SMS_APP,
+        Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + numbers.joinToString(";")))
+            .putExtra("sms_body", str(R.string.sos_sms_fallback_body))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+    )
 
     companion object {
         private const val TAG = "SosNotifications"
@@ -239,5 +259,6 @@ class SosNotifications(private val context: Context) {
         private const val REQUEST_SMS_APP = 13
         private const val REQUEST_CANCEL = 14
         private const val REQUEST_SEND_NOW = 15
+        private const val REQUEST_CALL_PRIMARY = 16
     }
 }

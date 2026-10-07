@@ -34,6 +34,7 @@ class SosMessagesTest {
         messages.staleLocationUpdate(worstFix),
         messages.locationUnavailableUpdate(),
         messages.safe(),
+        messages.test(),
     )
 
     @Test

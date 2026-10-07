@@ -1,5 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Rakshak</string>
+    <string name="brand_name_devanagari" translatable="false">रक्षक</string>
     <string name="sos_button">Emergency SOS</string>
     <string name="emergency_contacts">Emergency Contacts</string>
     <string name="add_contact">Add Contact</string>
@@ -70,6 +71,22 @@
     <string name="tile_banner_action">Add</string>
 
     <!-- Home -->
+    <string name="home_tagline">Your personal safety shield</string>
+    <string name="sos_label">SOS</string>
+    <string name="home_sos_tap">TAP TO SEND</string>
+    <string name="sos_button_description">Send SOS alert. A 3-second countdown starts, and you can cancel it.</string>
+    <string name="sos_button_disabled_description">SOS is off. Add an emergency contact first.</string>
+    <string name="home_add_contacts_warning">Add emergency contacts to enable SOS</string>
+    <string name="home_contacts_none">No contacts added yet</string>
+    <plurals name="home_contacts_count">
+        <item quantity="one">%1$d contact will receive alerts</item>
+        <item quantity="other">%1$d contacts will receive alerts</item>
+    </plurals>
+    <plurals name="home_more_contacts">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
+    <string name="home_manage_contacts_cd">Manage emergency contacts</string>
     <string name="call_112">Call 112</string>
     <string name="home_disclaimer">Rakshak does not replace emergency services.</string>
     <string name="about_open">About and privacy</string>
@@ -92,6 +109,158 @@
     <string name="about_section_disclaimer">Not a replacement for emergency services</string>
     <string name="about_disclaimer_body">Rakshak is a helper, not a guarantee. SMS can fail or be delayed. If you are in danger, call 112 (or your local emergency number) first whenever you can.</string>
     <string name="about_back">Back</string>
+
+    <!-- Contacts -->
+    <string name="action_cancel">Cancel</string>
+    <plurals name="contacts_count_of_max">
+        <item quantity="one">%1$d of %2$d contacts</item>
+        <item quantity="other">%1$d of %2$d contacts</item>
+    </plurals>
+    <string name="contacts_empty_title">No contacts yet</string>
+    <string name="contacts_empty_body">Add people who will receive emergency alerts with your location</string>
+    <string name="contacts_banner">These contacts receive an SMS with your location during SOS</string>
+    <string name="contacts_add_manual">Add manually</string>
+    <string name="contacts_add_from_phone">Choose from phone contacts</string>
+    <plurals name="contacts_limit_note">
+        <item quantity="one">You can add up to %1$d contact. Remove one to add another.</item>
+        <item quantity="other">You can add up to %1$d contacts. Remove one to add another.</item>
+    </plurals>
+    <string name="contact_dialog_add_title">Add contact</string>
+    <string name="contact_dialog_edit_title">Edit contact</string>
+    <string name="contact_field_name">Name</string>
+    <string name="contact_field_phone">Phone number</string>
+    <string name="contact_hint_not_own">Add people who can help you, not your own number.</string>
+    <string name="contact_save_add">Add contact</string>
+    <string name="contact_save_edit">Save</string>
+    <string name="contact_error_name_required">Name is required</string>
+    <plurals name="contact_error_name_too_long">
+        <item quantity="one">Name is too long (up to %1$d character)</item>
+        <item quantity="other">Name is too long (up to %1$d characters)</item>
+    </plurals>
+    <string name="contact_error_number_invalid">Enter a valid phone number (7 to 15 digits)</string>
+    <string name="contact_error_duplicate">Already added as %1$s</string>
+    <plurals name="contact_error_limit">
+        <item quantity="one">You already have %1$d contact</item>
+        <item quantity="other">You already have %1$d contacts</item>
+    </plurals>
+    <string name="contact_warning_no_country_code">No country code. Start with + and the code (for example +91) so the SMS also works from other countries.</string>
+    <string name="contact_warning_possible_duplicate">This may be the same person as %1$s.</string>
+    <string name="contact_menu_more_cd">More actions for %1$s</string>
+    <string name="contact_menu_edit">Edit</string>
+    <string name="contact_menu_set_primary">Make primary</string>
+    <string name="contact_menu_remove_primary">Remove primary</string>
+    <string name="contact_menu_delete">Delete</string>
+    <string name="contact_primary_badge">Primary</string>
+    <string name="contact_primary_cd">Primary contact</string>
+    <string name="contact_delete_title">Remove contact</string>
+    <string name="contact_delete_body">Remove %1$s from your emergency contacts?</string>
+    <string name="contact_delete_body_primary">%1$s is your primary contact. Another contact will become primary.</string>
+    <string name="contact_delete_confirm">Remove</string>
+    <string name="contact_notice_promoted">%1$s is now your primary contact</string>
+    <string name="home_call_primary">Call %1$s</string>
+    <string name="notification_call_contact">Call %1$s</string>
+
+    <!-- Test alert -->
+    <string name="contact_menu_test_alert">Send test alert</string>
+    <string name="test_alert_confirm_title">Send a test message?</string>
+    <string name="test_alert_confirm_body">Rakshak will send one SMS to %1$s (%2$s). It says it is only a test. Normal SMS charges may apply. This is not an SOS: no countdown starts and nothing is added to your SOS history.</string>
+    <string name="test_alert_confirm_send">Send test</string>
+    <string name="test_alert_sending">Sending a test message to %1$s…</string>
+    <string name="test_alert_done">OK</string>
+    <string name="test_alert_sent_title">Test message sent</string>
+    <string name="test_alert_sent_body">Your network accepted the test message for %1$s. Ask them to check that it arrived. This was only a test: no SOS was started.</string>
+    <string name="test_alert_unconfirmed_title">Test message not confirmed</string>
+    <string name="test_alert_unconfirmed_body">The network did not confirm the test message to %1$s in time. Ask them if it arrived, or try again. No SOS was started.</string>
+    <string name="test_alert_failed_title">Test message not sent</string>
+    <string name="test_alert_failed_body">Could not send the test message to %1$s (%2$s). No SOS was started.</string>
+    <string name="test_alert_unavailable_permission">SMS permission is off. Allow it from the setup on the Home screen, then try again.</string>
+    <string name="test_alert_unavailable_sim">No SIM card detected, so SMS cannot be sent.</string>
+    <string name="test_alert_unavailable_telephony">This device cannot send SMS.</string>
+
+    <!-- SOS history -->
+    <string name="history_title">SOS history</string>
+    <string name="history_subtitle">Your last %1$d SOS events, kept only on this phone. No phone numbers or locations are stored.</string>
+    <string name="history_empty_title">No SOS yet</string>
+    <string name="history_empty_body">When you send an SOS, a short record appears here.</string>
+    <string name="history_clear">Clear history</string>
+    <string name="history_clear_title">Clear SOS history?</string>
+    <string name="history_clear_body">This removes the list from this phone. It does not affect any message already sent.</string>
+    <string name="history_clear_confirm">Clear</string>
+    <string name="history_result_sent">Alert sent</string>
+    <string name="history_result_partly">Alert partly sent</string>
+    <string name="history_result_failed">Alert failed</string>
+    <string name="history_result_no_contacts">Not sent: no contacts</string>
+    <string name="history_result_sms_unavailable">Not sent: SMS unavailable</string>
+    <string name="history_source_button">SOS button</string>
+    <string name="history_source_widget">Widget</string>
+    <string name="history_source_volume">Volume keys</string>
+    <string name="history_source_tile">Quick Settings tile</string>
+    <string name="history_counts">Sent %1$d, not confirmed %2$d, failed %3$d</string>
+    <string name="history_location_current">Location shared</string>
+    <string name="history_location_stale">Old location shared, labelled with its age</string>
+    <string name="history_location_no_permission">Location permission was off</string>
+    <string name="history_location_unavailable">Location was not available</string>
+    <string name="history_marked_safe">Marked safe</string>
+    <string name="home_last_sos">Last SOS</string>
+    <string name="home_last_sos_open">Open SOS history</string>
+    <string name="about_section_history">SOS history</string>
+    <string name="about_history_body">Rakshak keeps a short list of your last 20 SOS events on this phone: the time, what started it, how many contacts were reached and whether location was shared. It holds no phone numbers and no coordinates, it is not included in backups, and you can clear it at any time. Test messages are never recorded.</string>
+
+    <!-- SOS notifications -->
+    <string name="notif_channel_sos">SOS Alerts</string>
+    <string name="notif_channel_sos_desc">Emergency SOS progress and results</string>
+    <string name="notif_channel_countdown">SOS countdown</string>
+    <string name="notif_channel_countdown_desc">The few seconds before an SOS is sent, with a Cancel button</string>
+    <string name="notif_progress_title">SOS in progress</string>
+    <string name="notif_progress_sending">Sending emergency alert\u2026</string>
+    <string name="notif_progress_safe">Telling your contacts you are safe\u2026</string>
+    <plurals name="notif_progress_sending_contacts">
+        <item quantity="one">Sending alert to %1$d contact\u2026</item>
+        <item quantity="other">Sending alert to %1$d contacts\u2026</item>
+    </plurals>
+    <!-- The words after the numbers are verbs ("sent", "failed"), not nouns, so no plural forms are needed. -->
+    <string name="notif_progress_dispatched" tools:ignore="PluralsCandidate">Alert: %1$d sent, %2$d unconfirmed, %3$d failed</string>
+    <string name="notif_progress_waiting_location">Alert sent. Getting your location\u2026</string>
+    <string name="notif_progress_sending_location">Sending your location to contacts\u2026</string>
+    <string name="notif_action_safe">I\'m safe</string>
+    <string name="notif_action_open_sms">Open SMS app</string>
+    <string name="notif_not_sent_title">SOS NOT SENT</string>
+    <string name="notif_no_contacts">You have no emergency contacts. Open Rakshak to add them.</string>
+    <string name="notif_sms_no_permission">SMS permission is turned off for Rakshak.</string>
+    <string name="notif_sms_no_sim">No SIM card detected. SMS cannot be sent.</string>
+    <string name="notif_sms_no_telephony">This device cannot send SMS.</string>
+    <string name="notif_sms_unknown">SMS could not be sent.</string>
+    <string name="notif_failed_title">SOS FAILED</string>
+    <plurals name="notif_failed_none_sent">
+        <item quantity="one">No SMS could be sent to your %1$d contact.</item>
+        <item quantity="other">No SMS could be sent to your %1$d contacts.</item>
+    </plurals>
+    <plurals name="notif_summary_sent">
+        <item quantity="one">Sent to %1$d of %2$d contact.</item>
+        <item quantity="other">Sent to %1$d of %2$d contacts.</item>
+    </plurals>
+    <string name="notif_summary_unconfirmed" tools:ignore="PluralsCandidate">%1$d not confirmed by the network.</string>
+    <string name="notif_summary_failed" tools:ignore="PluralsCandidate">%1$d failed.</string>
+    <string name="notif_sent_title">SOS alert sent</string>
+    <string name="notif_partly_title">SOS partly sent</string>
+    <string name="notif_safe_sent_title">\"I\'m safe\" sent</string>
+    <plurals name="notif_safe_sent_body">
+        <item quantity="one">Told %1$d contact you are safe.</item>
+        <item quantity="other">Told %1$d contacts you are safe.</item>
+    </plurals>
+    <string name="notif_safe_unavailable_title">\"I\'m safe\" NOT sent</string>
+    <string name="notif_safe_unavailable_body">SMS is unavailable. Please contact your emergency contacts directly.</string>
+    <string name="notif_stopped_title">SOS stopped</string>
+    <string name="notif_stopped_body">No contacts had been alerted.</string>
+    <string name="notif_error_body">Something went wrong while sending the alert.</string>
+    <string name="notif_timelimit_title">SOS stopped by the system</string>
+    <string name="notif_timelimit_body">Android ended the SOS service early. Check that your contacts received the alert.</string>
+    <string name="notif_loc_current">Location shared.</string>
+    <string name="notif_loc_stale">Only an old location was available and was sent.</string>
+    <string name="notif_loc_no_permission">Location not shared (permission off).</string>
+    <string name="notif_loc_unavailable">Location could not be determined.</string>
+    <!-- Prefilled in the user's SMS app as a fallback; SMS texts stay English and GSM-7, like the alerts. -->
+    <string name="sos_sms_fallback_body" translatable="false">SOS! I need help. Please call me or 112.</string>
 
     <!-- Widget -->
     <string name="widget_app_name">RAKSHAK</string>

@@ -7,6 +7,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -35,9 +41,9 @@ fun AboutScreen(onNavigateBack: () -> Unit) {
     val version = remember { appVersion(context) }
 
     Box(Modifier.fillMaxSize().background(C.Background)) {
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.navigationBars)) {
             Row(
-                Modifier.padding(top = 52.dp, start = 8.dp, end = 20.dp, bottom = 8.dp),
+                Modifier.windowInsetsPadding(WindowInsets.statusBars).padding(top = 8.dp, start = 8.dp, end = 20.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onNavigateBack) {
@@ -47,6 +53,8 @@ fun AboutScreen(onNavigateBack: () -> Unit) {
                         tint = C.TextPrimary,
                     )
                 }
+                RakshakMark(Modifier.size(36.dp))
+                Spacer(Modifier.width(12.dp))
                 Column {
                     Text(stringResource(R.string.about_title), color = C.TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Black)
                     Text(stringResource(R.string.about_version, version), color = C.TextSecondary, fontSize = 13.sp)
@@ -57,12 +65,13 @@ fun AboutScreen(onNavigateBack: () -> Unit) {
                 Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Section(R.string.about_section_disclaimer, R.string.about_disclaimer_body, C.Orange)
-                Section(R.string.about_section_none, R.string.about_none_body, C.Green)
+                Section(R.string.about_section_disclaimer, R.string.about_disclaimer_body, C.WarningText)
+                Section(R.string.about_section_none, R.string.about_none_body, C.SuccessText)
                 Section(R.string.about_section_data, R.string.about_data_body)
                 Section(R.string.about_section_location, R.string.about_location_body)
                 Section(R.string.about_section_sms, R.string.about_sms_body)
                 Section(R.string.about_section_triggers, R.string.about_triggers_body)
+                Section(R.string.about_section_history, R.string.about_history_body)
                 Section(R.string.about_section_access, R.string.about_access_body)
                 Spacer(Modifier.height(24.dp))
             }

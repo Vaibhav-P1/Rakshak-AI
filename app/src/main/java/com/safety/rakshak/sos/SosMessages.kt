@@ -38,6 +38,9 @@ class SosMessages(private val zone: ZoneId) {
 
     fun safe(): String = "I am safe now. Please ignore my SOS alert. -Rakshak"
 
+    /** A test message: never worded like an alert, with no location, so it cannot be mistaken for one. */
+    fun test(): String = "Rakshak TEST message: this is only a test, not an emergency. No action needed. -Rakshak"
+
     private fun fixDetails(fix: GeoFix): String {
         val time = timeFormat.format(Instant.ofEpochMilli(fix.fixTimeMillis).atZone(zone))
         val accuracy = fix.accuracyMeters?.let { formatAccuracy(it) } ?: return time

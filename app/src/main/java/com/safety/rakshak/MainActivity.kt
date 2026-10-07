@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -18,6 +19,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.safety.rakshak.ui.AboutScreen
 import com.safety.rakshak.ui.ContactsScreen
+import com.safety.rakshak.ui.HistoryScreen
 import com.safety.rakshak.ui.HomeScreen
 import com.safety.rakshak.ui.OnboardingScreen
 import com.safety.rakshak.ui.theme.RakshakColors
@@ -30,6 +32,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Draw behind the system bars; screens apply window insets themselves.
+        enableEdgeToEdge()
         setContent {
             RakshakTheme {
                 RakshakApp(viewModel = viewModel)
@@ -45,6 +49,7 @@ private const val ROUTE_ONBOARDING = "onboarding"
 private const val ROUTE_HOME = "home"
 private const val ROUTE_CONTACTS = "contacts"
 private const val ROUTE_ABOUT = "about"
+private const val ROUTE_HISTORY = "history"
 
 /**
  * No permission gate: the app opens straight away and each permission is requested
@@ -78,6 +83,7 @@ fun RakshakApp(viewModel: MainViewModel) {
                     viewModel = viewModel,
                     onNavigateToContacts = { navController.navigate(ROUTE_CONTACTS) },
                     onNavigateToAbout = { navController.navigate(ROUTE_ABOUT) },
+                    onNavigateToHistory = { navController.navigate(ROUTE_HISTORY) },
                 )
             }
             composable(ROUTE_CONTACTS) {
@@ -85,6 +91,9 @@ fun RakshakApp(viewModel: MainViewModel) {
                     viewModel = viewModel,
                     onNavigateBack = { navController.popBackStack() },
                 )
+            }
+            composable(ROUTE_HISTORY) {
+                HistoryScreen(onNavigateBack = { navController.popBackStack() })
             }
             composable(ROUTE_ABOUT) {
                 AboutScreen(onNavigateBack = { navController.popBackStack() })

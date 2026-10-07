@@ -81,7 +81,7 @@ fun SetupDialog(
         confirmButton = {
             Button(
                 onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = C.Red),
+                colors = ButtonDefaults.buttonColors(containerColor = C.Primary, contentColor = C.OnPrimary),
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
             ) { Text(stringResource(R.string.action_done), fontWeight = FontWeight.Bold) }
@@ -106,8 +106,8 @@ private fun PermissionRow(
             Spacer(Modifier.width(8.dp))
             Text(
                 stringResource(if (item.required) R.string.setup_required_tag else R.string.setup_recommended_tag),
-                color = if (item.required) C.Red else C.TextSecondary,
-                fontSize = 11.sp,
+                color = if (item.required) C.DangerText else C.TextSecondary,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
             )
         }
@@ -116,20 +116,20 @@ private fun PermissionRow(
         when {
             state == GrantState.GRANTED && !approxOnly -> StatusLine(R.string.perm_status_allowed)
             state == GrantState.GRANTED && approxOnly -> {
-                Text(stringResource(R.string.perm_location_approx), color = C.Orange, fontSize = 12.sp, lineHeight = 17.sp)
+                Text(stringResource(R.string.perm_location_approx), color = C.WarningText, fontSize = 12.sp, lineHeight = 17.sp)
                 OutlinedButton(onClick = { onAllow(item) }, shape = RoundedCornerShape(12.dp)) {
-                    Text(stringResource(R.string.action_allow_precise), color = C.Orange)
+                    Text(stringResource(R.string.action_allow_precise), color = C.WarningText)
                 }
             }
             state == GrantState.NEEDS_SETTINGS -> {
-                Text(stringResource(R.string.perm_status_blocked), color = C.Orange, fontSize = 12.sp)
+                Text(stringResource(R.string.perm_status_blocked), color = C.WarningText, fontSize = 12.sp)
                 OutlinedButton(onClick = onOpenSettings, shape = RoundedCornerShape(12.dp)) {
                     Text(stringResource(R.string.action_open_settings), color = C.TextPrimary)
                 }
             }
             else -> Button(
                 onClick = { onAllow(item) },
-                colors = ButtonDefaults.buttonColors(containerColor = C.Red),
+                colors = ButtonDefaults.buttonColors(containerColor = C.Primary, contentColor = C.OnPrimary),
                 shape = RoundedCornerShape(12.dp),
             ) { Text(stringResource(R.string.action_allow), fontWeight = FontWeight.Bold) }
         }
@@ -139,9 +139,9 @@ private fun PermissionRow(
 @Composable
 private fun StatusLine(textRes: Int) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = C.Green, modifier = Modifier.size(16.dp))
+        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = C.SuccessText, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(6.dp))
-        Text(stringResource(textRes), color = C.Green, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(stringResource(textRes), color = C.SuccessText, fontSize = 12.sp, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -172,7 +172,7 @@ fun VolumeGuardDisclosureDialog(
         confirmButton = {
             Button(
                 onClick = onAgree,
-                colors = ButtonDefaults.buttonColors(containerColor = C.Red),
+                colors = ButtonDefaults.buttonColors(containerColor = C.Primary, contentColor = C.OnPrimary),
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
             ) { Text(stringResource(R.string.volume_disclosure_agree), fontWeight = FontWeight.Bold) }

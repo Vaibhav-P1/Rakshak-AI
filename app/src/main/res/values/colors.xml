@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand red: launcher background, splash mark, widget button. -->
+    <color name="brand_red">#D92336</color>
+    <!-- Launch window background = RakshakPalette background for the current mode. -->
+    <color name="launch_bg">#FAFAFC</color>
+    <!-- Home screen widget: a fixed opaque dark card in both modes (values equal RakshakPalette.Dark). -->
+    <color name="widget_card">#13161E</color>
+    <color name="widget_card_stroke">#1F2433</color>
+    <color name="widget_text_primary">#F0F2F8</color>
+    <color name="widget_text_secondary">#9AA1B2</color>
+    <color name="widget_button_text">#FFFFFF</color>
+</resources>

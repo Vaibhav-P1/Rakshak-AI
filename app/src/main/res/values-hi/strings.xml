@@ -1,0 +1,270 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name">Rakshak</string>
+    <string name="sos_button">आपातकालीन SOS</string>
+    <string name="emergency_contacts">आपातकालीन संपर्क</string>
+    <string name="add_contact">संपर्क जोड़ें</string>
+    <string name="trigger_sos">SOS अलर्ट भेजें</string>
+    <string name="accessibility_service_description">केवल वॉल्यूम अप और वॉल्यूम डाउन एक साथ दबने पर ध्यान देती है, ताकि SOS काउंटडाउन शुरू हो सके। यह आपकी स्क्रीन या दूसरे ऐप नहीं पढ़ती।</string>
+    <string name="sos_widget_description">Rakshak SOS — आपातकालीन अलर्ट भेजने के लिए टैप करें</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">Rakshak में आपका स्वागत है</string>
+    <string name="onboarding_subtitle">एक निजी सुरक्षा टूल जो ज़रूरत पड़ने पर आपके भरोसेमंद संपर्कों को SMS भेजता है।</string>
+    <string name="onboarding_how_title">यह कैसे काम करता है</string>
+    <string name="onboarding_how_1">आप SOS बटन, विजेट, क्विक सेटिंग्स टाइल या वॉल्यूम गार्ड से SOS शुरू करते हैं। 3 सेकंड का काउंटडाउन आपको रद्द करने का मौका देता है।</string>
+    <string name="onboarding_how_2">Rakshak आपके आपातकालीन संपर्कों को आपकी लोकेशन के साथ SMS भेजता है।</string>
+    <string name="onboarding_how_3">संदेश आपके फ़ोन के SIM से भेजे जाते हैं, इसलिए आपके ऑपरेटर के SMS शुल्क लग सकते हैं।</string>
+    <string name="disclaimer_title">ज़रूरी</string>
+    <string name="disclaimer_body">Rakshak आपातकालीन सेवाओं का विकल्प नहीं है। अगर आप खतरे में हैं, तो जब भी संभव हो पहले 112 (या अपने क्षेत्र का आपातकालीन नंबर) पर कॉल करें। सिग्नल, SIM या बैलेंस न होने पर SMS विफल या देर से पहुँच सकता है।</string>
+    <string name="privacy_short_title">आपकी गोपनीयता</string>
+    <string name="privacy_short_body">आपके संपर्क इसी फ़ोन में रहते हैं। Rakshak में कोई अकाउंट, सर्वर, एनालिटिक्स या विज्ञापन नहीं है, और यह इंटरनेट से जुड़ नहीं सकता। आपकी लोकेशन और संदेशों का उपयोग केवल तब होता है जब आप SOS शुरू करते हैं।</string>
+    <string name="onboarding_continue">शुरू करें</string>
+    <string name="onboarding_details">पूरा गोपनीयता विवरण पढ़ें</string>
+
+    <!-- Setup / permissions -->
+    <string name="setup_banner">SOS काम करे, इसके लिए सेटअप पूरा करें\nअनुमतियाँ देखने के लिए टैप करें</string>
+    <string name="setup_banner_action">देखें</string>
+    <string name="setup_title">सेटअप पूरा करें</string>
+    <string name="setup_intro">Rakshak सिर्फ़ वही माँगता है जो ज़रूरी है, और उसका उपयोग केवल तब करता है जब आप SOS शुरू करते हैं।</string>
+    <string name="setup_required_tag">ज़रूरी</string>
+    <string name="setup_recommended_tag">सुझाया गया</string>
+    <string name="perm_sms_title">SMS अलर्ट भेजें</string>
+    <string name="perm_sms_why">SOS शुरू करने पर Rakshak आपके SIM से आपातकालीन संपर्कों को SMS भेज सके। इसके बिना SOS अलर्ट नहीं भेज सकता।</string>
+    <string name="perm_location_title">अपनी लोकेशन साझा करें</string>
+    <string name="perm_location_why">आपके अलर्ट में मैप लिंक जोड़ता है। अनुमानित लोकेशन भी चलती है; सटीक लोकेशन ज़्यादा सही होती है। लोकेशन केवल SOS शुरू करने पर पढ़ी जाती है।</string>
+    <string name="perm_location_approx">अनुमानित लोकेशन चालू है। ज़्यादा सही मैप लिंक के लिए सटीक लोकेशन की अनुमति दें।</string>
+    <string name="perm_notifications_title">SOS की स्थिति दिखाएँ</string>
+    <string name="perm_notifications_why">दिखाता है कि आपका अलर्ट भेजा गया या नहीं, और \"मैं सुरक्षित हूँ\" बटन।</string>
+    <string name="perm_status_allowed">अनुमति मिली</string>
+    <string name="perm_status_blocked">रोका गया है। सेटिंग्स में इसे चालू करें।</string>
+    <string name="action_allow">अनुमति दें</string>
+    <string name="action_allow_precise">सटीक लोकेशन दें</string>
+    <string name="action_open_settings">सेटिंग्स खोलें</string>
+    <string name="action_not_now">अभी नहीं</string>
+    <string name="action_done">हो गया</string>
+
+    <!-- Countdown (every trigger) -->
+    <string name="countdown_title">%1$d सेकंड में SOS…</string>
+    <string name="countdown_text">रद्द न करने पर आपके आपातकालीन संपर्कों को अलर्ट भेजा जाएगा।</string>
+    <string name="countdown_cancel">रद्द करें</string>
+    <string name="countdown_send_now">अभी भेजें</string>
+    <string name="countdown_dialog_title">आपातकालीन अलर्ट</string>
+    <plurals name="countdown_dialog_seconds">
+        <item quantity="one">%1$d सेकंड में अलर्ट भेजा जाएगा</item>
+        <item quantity="other">%1$d सेकंड में अलर्ट भेजा जाएगा</item>
+    </plurals>
+
+    <!-- Volume Guard -->
+    <string name="volume_banner">वॉल्यूम गार्ड चालू करें\nSOS शुरू करने के लिए दोनों वॉल्यूम बटन दबाएँ</string>
+    <string name="volume_banner_action">चालू करें</string>
+    <string name="volume_card_title">वॉल्यूम गार्ड</string>
+    <string name="volume_card_on">SOS शुरू करने के लिए वॉल्यूम अप + डाउन दबाएँ</string>
+    <string name="volume_card_off">सक्रिय करने के लिए चालू करें</string>
+    <string name="volume_disclosure_title">वॉल्यूम गार्ड एक एक्सेसिबिलिटी सेवा का उपयोग करता है</string>
+    <string name="volume_disclosure_body">वॉल्यूम अप और वॉल्यूम डाउन एक साथ दबने का पता लगाने के लिए, Rakshak की एक्सेसिबिलिटी सेवा Android सेटिंग्स में चालू करनी होती है।\n\nयह सेवा केवल इन्हीं दो बटनों पर नज़र रखती है। यह आपकी स्क्रीन, दूसरे ऐप, पासवर्ड या आपके टाइप किए हुए को नहीं पढ़ती, और कहीं कोई डेटा नहीं भेजती।\n\nदोनों बटन दबाने पर 3 सेकंड का काउंटडाउन शुरू होता है और आप उसे रद्द कर सकते हैं। इसे चालू न करें तो भी आप SOS बटन, विजेट और क्विक सेटिंग्स टाइल इस्तेमाल कर सकते हैं।</string>
+    <string name="volume_disclosure_agree">ठीक है, सेटिंग्स खोलें</string>
+
+    <!-- Quick Settings tile -->
+    <string name="tile_label">Rakshak SOS</string>
+    <string name="tile_banner">क्विक सेटिंग्स में SOS टाइल जोड़ें\nनोटिफ़िकेशन शेड से SOS शुरू करें</string>
+    <string name="tile_banner_action">जोड़ें</string>
+
+    <!-- Home -->
+    <string name="home_tagline">आपका निजी सुरक्षा कवच</string>
+    <string name="sos_label">SOS</string>
+    <string name="home_sos_tap">भेजने के लिए टैप करें</string>
+    <string name="sos_button_description">SOS अलर्ट भेजें। 3 सेकंड का काउंटडाउन शुरू होता है, जिसे आप रद्द कर सकते हैं।</string>
+    <string name="sos_button_disabled_description">SOS बंद है। पहले एक आपातकालीन संपर्क जोड़ें।</string>
+    <string name="home_add_contacts_warning">SOS चालू करने के लिए आपातकालीन संपर्क जोड़ें</string>
+    <string name="home_contacts_none">अभी कोई संपर्क नहीं जोड़ा गया</string>
+    <plurals name="home_contacts_count">
+        <item quantity="one">%1$d संपर्क को अलर्ट मिलेगा</item>
+        <item quantity="other">%1$d संपर्कों को अलर्ट मिलेगा</item>
+    </plurals>
+    <plurals name="home_more_contacts">
+        <item quantity="one">+%1$d और</item>
+        <item quantity="other">+%1$d और</item>
+    </plurals>
+    <string name="home_manage_contacts_cd">आपातकालीन संपर्क प्रबंधित करें</string>
+    <string name="call_112">112 पर कॉल करें</string>
+    <string name="home_disclaimer">Rakshak आपातकालीन सेवाओं का विकल्प नहीं है।</string>
+    <string name="about_open">जानकारी और गोपनीयता</string>
+
+    <!-- About -->
+    <string name="about_title">जानकारी और गोपनीयता</string>
+    <string name="about_version">संस्करण %1$s</string>
+    <string name="about_section_data">Rakshak क्या सहेजता है</string>
+    <string name="about_data_body">आपके आपातकालीन संपर्क (नाम और फ़ोन नंबर) इसी फ़ोन में सहेजे जाते हैं। वे आपके Android / Google बैकअप में शामिल हो सकते हैं। Rakshak आपके सबसे हाल के SOS की स्थिति (किन संपर्कों को अलर्ट गया) भी रखता है, ताकि रुकावट के बाद वह पूरा हो सके।</string>
+    <string name="about_section_location">लोकेशन</string>
+    <string name="about_location_body">केवल SOS शुरू करने पर, Google Play services से पढ़ी जाती है। यह सिर्फ़ आपके संपर्कों को भेजे गए SMS के अंदर जाती है।</string>
+    <string name="about_section_sms">SMS</string>
+    <string name="about_sms_body">अलर्ट आपके SIM से सीधे आपके संपर्कों को भेजे जाते हैं। Rakshak का कोई सर्वर नहीं है और वह आपके दूसरे संदेश नहीं पढ़ सकता।</string>
+    <string name="about_section_triggers">SOS शुरू करने के तरीके</string>
+    <string name="about_triggers_body">SOS बटन, होम स्क्रीन विजेट, क्विक सेटिंग्स टाइल और वॉल्यूम गार्ड। हर एक 3 सेकंड का काउंटडाउन शुरू करता है, जिसमें रद्द करें और अभी भेजें के विकल्प होते हैं। क्विक सेटिंग्स टाइल चलाने से पहले Android आपसे फ़ोन अनलॉक करने को कह सकता है। Rakshak माइक्रोफ़ोन का उपयोग नहीं करता।</string>
+    <string name="about_section_access">एक्सेसिबिलिटी सेवा (वॉल्यूम गार्ड, वैकल्पिक)</string>
+    <string name="about_access_body">केवल वॉल्यूम अप और वॉल्यूम डाउन एक साथ दबने का पता लगाने और SOS काउंटडाउन शुरू करने के लिए। यह आपकी स्क्रीन, दूसरे ऐप या आपके टाइप किए हुए को नहीं पढ़ती।</string>
+    <string name="about_section_none">Rakshak क्या नहीं करता</string>
+    <string name="about_none_body">कोई अकाउंट नहीं, कोई एनालिटिक्स नहीं, कोई विज्ञापन नहीं, और डेवलपर को कोई डेटा नहीं भेजा जाता। ऐप इंटरनेट की अनुमति नहीं माँगता।</string>
+    <string name="about_section_disclaimer">आपातकालीन सेवाओं का विकल्प नहीं</string>
+    <string name="about_disclaimer_body">Rakshak एक सहायक है, गारंटी नहीं। SMS विफल या देर से पहुँच सकता है। अगर आप खतरे में हैं, तो जब भी संभव हो पहले 112 (या अपने क्षेत्र का आपातकालीन नंबर) पर कॉल करें।</string>
+    <string name="about_back">वापस</string>
+
+    <!-- Contacts -->
+    <string name="action_cancel">रद्द करें</string>
+    <plurals name="contacts_count_of_max">
+        <item quantity="one">%1$d / %2$d संपर्क</item>
+        <item quantity="other">%1$d / %2$d संपर्क</item>
+    </plurals>
+    <string name="contacts_empty_title">अभी कोई संपर्क नहीं</string>
+    <string name="contacts_empty_body">ऐसे लोगों को जोड़ें जिन्हें आपकी लोकेशन के साथ आपातकालीन अलर्ट मिलेंगे</string>
+    <string name="contacts_banner">SOS के दौरान इन संपर्कों को आपकी लोकेशन के साथ SMS मिलता है</string>
+    <string name="contacts_add_manual">खुद जोड़ें</string>
+    <string name="contacts_add_from_phone">फ़ोन के संपर्कों से चुनें</string>
+    <plurals name="contacts_limit_note">
+        <item quantity="one">आप अधिकतम %1$d संपर्क जोड़ सकते हैं। नया जोड़ने के लिए एक हटाएँ।</item>
+        <item quantity="other">आप अधिकतम %1$d संपर्क जोड़ सकते हैं। नया जोड़ने के लिए एक हटाएँ।</item>
+    </plurals>
+    <string name="contact_dialog_add_title">संपर्क जोड़ें</string>
+    <string name="contact_dialog_edit_title">संपर्क बदलें</string>
+    <string name="contact_field_name">नाम</string>
+    <string name="contact_field_phone">फ़ोन नंबर</string>
+    <string name="contact_hint_not_own">ऐसे लोगों को जोड़ें जो आपकी मदद कर सकें, अपना खुद का नंबर नहीं।</string>
+    <string name="contact_save_add">संपर्क जोड़ें</string>
+    <string name="contact_save_edit">सहेजें</string>
+    <string name="contact_error_name_required">नाम ज़रूरी है</string>
+    <plurals name="contact_error_name_too_long">
+        <item quantity="one">नाम बहुत लंबा है (अधिकतम %1$d अक्षर)</item>
+        <item quantity="other">नाम बहुत लंबा है (अधिकतम %1$d अक्षर)</item>
+    </plurals>
+    <string name="contact_error_number_invalid">सही फ़ोन नंबर लिखें (7 से 15 अंक)</string>
+    <string name="contact_error_duplicate">%1$s के नाम से पहले से जुड़ा है</string>
+    <plurals name="contact_error_limit">
+        <item quantity="one">आपके पास पहले से %1$d संपर्क है</item>
+        <item quantity="other">आपके पास पहले से %1$d संपर्क हैं</item>
+    </plurals>
+    <string name="contact_warning_no_country_code">देश कोड नहीं है। + और कोड (जैसे +91) से शुरू करें, ताकि SMS दूसरे देशों से भी काम करे।</string>
+    <string name="contact_warning_possible_duplicate">यह शायद वही व्यक्ति है जो %1$s है।</string>
+    <string name="contact_menu_more_cd">%1$s के लिए और विकल्प</string>
+    <string name="contact_menu_edit">बदलें</string>
+    <string name="contact_menu_set_primary">मुख्य बनाएँ</string>
+    <string name="contact_menu_remove_primary">मुख्य हटाएँ</string>
+    <string name="contact_menu_delete">हटाएँ</string>
+    <string name="contact_primary_badge">मुख्य</string>
+    <string name="contact_primary_cd">मुख्य संपर्क</string>
+    <string name="contact_delete_title">संपर्क हटाएँ</string>
+    <string name="contact_delete_body">क्या %1$s को आपके आपातकालीन संपर्कों से हटाना है?</string>
+    <string name="contact_delete_body_primary">%1$s आपका मुख्य संपर्क है। कोई दूसरा संपर्क मुख्य बन जाएगा।</string>
+    <string name="contact_delete_confirm">हटाएँ</string>
+    <string name="contact_notice_promoted">%1$s अब आपका मुख्य संपर्क है</string>
+    <string name="home_call_primary">%1$s को कॉल करें</string>
+    <string name="notification_call_contact">%1$s को कॉल करें</string>
+
+    <!-- Test alert -->
+    <string name="contact_menu_test_alert">टेस्ट अलर्ट भेजें</string>
+    <string name="test_alert_confirm_title">टेस्ट संदेश भेजें?</string>
+    <string name="test_alert_confirm_body">Rakshak %1$s (%2$s) को एक SMS भेजेगा। उसमें लिखा होगा कि यह सिर्फ़ टेस्ट है। सामान्य SMS शुल्क लग सकते हैं। यह SOS नहीं है: कोई काउंटडाउन शुरू नहीं होता और आपके SOS इतिहास में कुछ नहीं जुड़ता।</string>
+    <string name="test_alert_confirm_send">टेस्ट भेजें</string>
+    <string name="test_alert_sending">%1$s को टेस्ट संदेश भेजा जा रहा है…</string>
+    <string name="test_alert_done">ठीक है</string>
+    <string name="test_alert_sent_title">टेस्ट संदेश भेजा गया</string>
+    <string name="test_alert_sent_body">आपके नेटवर्क ने %1$s के लिए टेस्ट संदेश स्वीकार कर लिया। उनसे पूछें कि वह पहुँचा या नहीं। यह सिर्फ़ टेस्ट था: कोई SOS शुरू नहीं हुआ।</string>
+    <string name="test_alert_unconfirmed_title">टेस्ट संदेश की पुष्टि नहीं हुई</string>
+    <string name="test_alert_unconfirmed_body">नेटवर्क ने %1$s को टेस्ट संदेश की पुष्टि समय पर नहीं दी। उनसे पूछें कि वह पहुँचा या नहीं, या दोबारा कोशिश करें। कोई SOS शुरू नहीं हुआ।</string>
+    <string name="test_alert_failed_title">टेस्ट संदेश नहीं भेजा गया</string>
+    <string name="test_alert_failed_body">%1$s को टेस्ट संदेश नहीं भेजा जा सका (%2$s)। कोई SOS शुरू नहीं हुआ।</string>
+    <string name="test_alert_unavailable_permission">SMS की अनुमति बंद है। होम स्क्रीन के सेटअप से इसे चालू करें, फिर दोबारा कोशिश करें।</string>
+    <string name="test_alert_unavailable_sim">कोई SIM कार्ड नहीं मिला, इसलिए SMS नहीं भेजा जा सकता।</string>
+    <string name="test_alert_unavailable_telephony">यह डिवाइस SMS नहीं भेज सकता।</string>
+
+    <!-- SOS history -->
+    <string name="history_title">SOS इतिहास</string>
+    <string name="history_subtitle">आपके पिछले %1$d SOS, जो केवल इसी फ़ोन में रखे जाते हैं। कोई फ़ोन नंबर या लोकेशन सहेजी नहीं जाती।</string>
+    <string name="history_empty_title">अभी कोई SOS नहीं</string>
+    <string name="history_empty_body">जब आप SOS भेजेंगे, यहाँ एक छोटा रिकॉर्ड दिखेगा।</string>
+    <string name="history_clear">इतिहास साफ़ करें</string>
+    <string name="history_clear_title">SOS इतिहास साफ़ करें?</string>
+    <string name="history_clear_body">इससे यह सूची इस फ़ोन से हट जाएगी। पहले से भेजे गए किसी संदेश पर इसका असर नहीं पड़ेगा।</string>
+    <string name="history_clear_confirm">साफ़ करें</string>
+    <string name="history_result_sent">अलर्ट भेजा गया</string>
+    <string name="history_result_partly">अलर्ट आंशिक रूप से भेजा गया</string>
+    <string name="history_result_failed">अलर्ट विफल रहा</string>
+    <string name="history_result_no_contacts">भेजा नहीं गया: कोई संपर्क नहीं</string>
+    <string name="history_result_sms_unavailable">भेजा नहीं गया: SMS उपलब्ध नहीं</string>
+    <string name="history_source_button">SOS बटन</string>
+    <string name="history_source_widget">विजेट</string>
+    <string name="history_source_volume">वॉल्यूम बटन</string>
+    <string name="history_source_tile">क्विक सेटिंग्स टाइल</string>
+    <string name="history_counts">भेजे गए %1$d, पुष्टि नहीं %2$d, विफल %3$d</string>
+    <string name="history_location_current">लोकेशन साझा की गई</string>
+    <string name="history_location_stale">पुरानी लोकेशन साझा की गई, उसकी उम्र के साथ</string>
+    <string name="history_location_no_permission">लोकेशन की अनुमति बंद थी</string>
+    <string name="history_location_unavailable">लोकेशन उपलब्ध नहीं थी</string>
+    <string name="history_marked_safe">सुरक्षित बताया गया</string>
+    <string name="home_last_sos">पिछला SOS</string>
+    <string name="home_last_sos_open">SOS इतिहास खोलें</string>
+    <string name="about_section_history">SOS इतिहास</string>
+    <string name="about_history_body">Rakshak इसी फ़ोन में आपके पिछले 20 SOS की एक छोटी सूची रखता है: समय, किससे शुरू हुआ, कितने संपर्कों तक पहुँचा और लोकेशन साझा हुई या नहीं। इसमें कोई फ़ोन नंबर या निर्देशांक नहीं होते, यह बैकअप में शामिल नहीं होती, और आप इसे कभी भी साफ़ कर सकते हैं। टेस्ट संदेश कभी दर्ज नहीं होते।</string>
+
+    <!-- SOS notifications -->
+    <string name="notif_channel_sos">SOS अलर्ट</string>
+    <string name="notif_channel_sos_desc">आपातकालीन SOS की प्रगति और नतीजे</string>
+    <string name="notif_channel_countdown">SOS काउंटडाउन</string>
+    <string name="notif_channel_countdown_desc">SOS भेजे जाने से पहले के कुछ सेकंड, रद्द करने के बटन के साथ</string>
+    <string name="notif_progress_title">SOS जारी है</string>
+    <string name="notif_progress_sending">आपातकालीन अलर्ट भेजा जा रहा है…</string>
+    <string name="notif_progress_safe">आपके संपर्कों को बताया जा रहा है कि आप सुरक्षित हैं…</string>
+    <plurals name="notif_progress_sending_contacts">
+        <item quantity="one">%1$d संपर्क को अलर्ट भेजा जा रहा है…</item>
+        <item quantity="other">%1$d संपर्कों को अलर्ट भेजा जा रहा है…</item>
+    </plurals>
+    <string name="notif_progress_dispatched" tools:ignore="PluralsCandidate">अलर्ट: %1$d भेजे गए, %2$d की पुष्टि नहीं, %3$d विफल</string>
+    <string name="notif_progress_waiting_location">अलर्ट भेजा गया। आपकी लोकेशन ली जा रही है…</string>
+    <string name="notif_progress_sending_location">संपर्कों को आपकी लोकेशन भेजी जा रही है…</string>
+    <string name="notif_action_safe">मैं सुरक्षित हूँ</string>
+    <string name="notif_action_open_sms">SMS ऐप खोलें</string>
+    <string name="notif_not_sent_title">SOS नहीं भेजा गया</string>
+    <string name="notif_no_contacts">आपका कोई आपातकालीन संपर्क नहीं है। जोड़ने के लिए Rakshak खोलें।</string>
+    <string name="notif_sms_no_permission">Rakshak के लिए SMS की अनुमति बंद है।</string>
+    <string name="notif_sms_no_sim">कोई SIM कार्ड नहीं मिला। SMS नहीं भेजा जा सकता।</string>
+    <string name="notif_sms_no_telephony">यह डिवाइस SMS नहीं भेज सकता।</string>
+    <string name="notif_sms_unknown">SMS नहीं भेजा जा सका।</string>
+    <string name="notif_failed_title">SOS विफल रहा</string>
+    <plurals name="notif_failed_none_sent">
+        <item quantity="one">आपके %1$d संपर्क को कोई SMS नहीं भेजा जा सका।</item>
+        <item quantity="other">आपके %1$d संपर्कों को कोई SMS नहीं भेजा जा सका।</item>
+    </plurals>
+    <plurals name="notif_summary_sent">
+        <item quantity="one">%2$d में से %1$d संपर्क को भेजा गया।</item>
+        <item quantity="other">%2$d में से %1$d संपर्कों को भेजा गया।</item>
+    </plurals>
+    <string name="notif_summary_unconfirmed" tools:ignore="PluralsCandidate">%1$d की नेटवर्क से पुष्टि नहीं हुई।</string>
+    <string name="notif_summary_failed" tools:ignore="PluralsCandidate">%1$d विफल रहे।</string>
+    <string name="notif_sent_title">SOS अलर्ट भेजा गया</string>
+    <string name="notif_partly_title">SOS आंशिक रूप से भेजा गया</string>
+    <string name="notif_safe_sent_title">\"मैं सुरक्षित हूँ\" भेजा गया</string>
+    <plurals name="notif_safe_sent_body">
+        <item quantity="one">%1$d संपर्क को बताया कि आप सुरक्षित हैं।</item>
+        <item quantity="other">%1$d संपर्कों को बताया कि आप सुरक्षित हैं।</item>
+    </plurals>
+    <string name="notif_safe_unavailable_title">\"मैं सुरक्षित हूँ\" नहीं भेजा गया</string>
+    <string name="notif_safe_unavailable_body">SMS उपलब्ध नहीं है। कृपया अपने आपातकालीन संपर्कों से सीधे बात करें।</string>
+    <string name="notif_stopped_title">SOS रोका गया</string>
+    <string name="notif_stopped_body">किसी संपर्क को अलर्ट नहीं भेजा गया था।</string>
+    <string name="notif_error_body">अलर्ट भेजते समय कुछ गड़बड़ हो गई।</string>
+    <string name="notif_timelimit_title">सिस्टम ने SOS रोक दिया</string>
+    <string name="notif_timelimit_body">Android ने SOS सेवा समय से पहले रोक दी। जाँच लें कि आपके संपर्कों को अलर्ट मिला या नहीं।</string>
+    <string name="notif_loc_current">लोकेशन साझा की गई।</string>
+    <string name="notif_loc_stale">केवल पुरानी लोकेशन उपलब्ध थी और वही भेजी गई।</string>
+    <string name="notif_loc_no_permission">लोकेशन साझा नहीं की गई (अनुमति बंद)।</string>
+    <string name="notif_loc_unavailable">लोकेशन पता नहीं चल सकी।</string>
+
+    <!-- Widget -->
+    <string name="widget_app_name">RAKSHAK</string>
+    <string name="widget_sos_label">SOS</string>
+    <string name="widget_loading">संपर्क लोड हो रहे हैं…</string>
+    <string name="widget_no_contacts">कोई संपर्क नहीं जोड़ा गया</string>
+    <plurals name="widget_contacts">
+        <item quantity="one">%1$d संपर्क को अलर्ट मिलेगा</item>
+        <item quantity="other">%1$d संपर्कों को अलर्ट मिलेगा</item>
+    </plurals>
+</resources>

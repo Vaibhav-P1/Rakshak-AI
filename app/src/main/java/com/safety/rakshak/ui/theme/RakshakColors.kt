@@ -1,20 +1,57 @@
 package com.safety.rakshak.ui.theme
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
+/** The palette as Compose colours for the current mode. Values come only from [RakshakPalette]. */
+@Immutable
+class RakshakColorRoles(
+    val background: Color,
+    val surface: Color,
+    val surfaceVariant: Color,
+    val textPrimary: Color,
+    val textSecondary: Color,
+    val primary: Color,
+    val onPrimary: Color,
+    val dangerText: Color,
+    val successText: Color,
+    val warningText: Color,
+    val outline: Color,
+)
+
+fun RakshakPalette.Scheme.toRoles() = RakshakColorRoles(
+    background = Color(background),
+    surface = Color(surface),
+    surfaceVariant = Color(surfaceVariant),
+    textPrimary = Color(textPrimary),
+    textSecondary = Color(textSecondary),
+    primary = Color(primary),
+    onPrimary = Color(onPrimary),
+    dangerText = Color(dangerText),
+    successText = Color(successText),
+    warningText = Color(warningText),
+    outline = Color(outline),
+)
+
+val LocalRakshakColors = staticCompositionLocalOf { RakshakPalette.Dark.toRoles() }
+
 /**
- * Shared dark-UI colors for new screens. The older screens still carry private copies
- * of these; they move here during the Phase 4 design-system pass.
- * TextMuted is for decoration only: it is below WCAG AA contrast on [Background].
+ * Use these in composables instead of colour literals (`UiGuardsTest` enforces it).
+ * Text roles are for text and icons; [Primary] is the SOS red fill and the brand mark;
+ * use [DangerText] for red text. Each role is contrast-checked in `ContrastTest`.
  */
 object RakshakColors {
-    val Background = Color(0xFF0A0C10)
-    val Surface = Color(0xFF13161E)
-    val Stroke = Color(0xFF1F2433)
-    val Red = Color(0xFFE8293A)
-    val Green = Color(0xFF2ECC8A)
-    val Orange = Color(0xFFFF9500)
-    val TextPrimary = Color(0xFFF0F2F8)
-    val TextSecondary = Color(0xFF9AA1B2)
-    val TextMuted = Color(0xFF3D4455)
+    val Background: Color @Composable get() = LocalRakshakColors.current.background
+    val Surface: Color @Composable get() = LocalRakshakColors.current.surface
+    val SurfaceVariant: Color @Composable get() = LocalRakshakColors.current.surfaceVariant
+    val TextPrimary: Color @Composable get() = LocalRakshakColors.current.textPrimary
+    val TextSecondary: Color @Composable get() = LocalRakshakColors.current.textSecondary
+    val Primary: Color @Composable get() = LocalRakshakColors.current.primary
+    val OnPrimary: Color @Composable get() = LocalRakshakColors.current.onPrimary
+    val DangerText: Color @Composable get() = LocalRakshakColors.current.dangerText
+    val SuccessText: Color @Composable get() = LocalRakshakColors.current.successText
+    val WarningText: Color @Composable get() = LocalRakshakColors.current.warningText
+    val Outline: Color @Composable get() = LocalRakshakColors.current.outline
 }
