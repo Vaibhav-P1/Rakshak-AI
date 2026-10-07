@@ -4,7 +4,7 @@ package com.safety.rakshak.sos
 // Pure Kotlin: no Android types, so the pipeline is unit-testable.
 
 /** What started the SOS. Recorded in the session for diagnostics. */
-enum class SosSource { APP_BUTTON, WIDGET, VOLUME_KEYS, VOICE }
+enum class SosSource { APP_BUTTON, WIDGET, VOLUME_KEYS, TILE }
 
 data class SosContact(val name: String, val phoneNumber: String)
 

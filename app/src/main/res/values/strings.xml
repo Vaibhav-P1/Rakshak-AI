@@ -1,19 +1,17 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Rakshak</string>
     <string name="sos_button">Emergency SOS</string>
-    <string name="voice_guard">Voice Guard</string>
     <string name="emergency_contacts">Emergency Contacts</string>
     <string name="add_contact">Add Contact</string>
     <string name="trigger_sos">Trigger SOS Alert</string>
-    <string name="listening">Listening for \'Help Rakshak\'</string>
-    <string name="accessibility_service_description">Allows Rakshak to detect Volume Up + Down pressed together to trigger SOS emergency alert</string>
+    <string name="accessibility_service_description">Only watches for Volume Up and Volume Down pressed together, to start the SOS countdown. It does not read your screen or other apps.</string>
     <string name="sos_widget_description">Rakshak SOS — tap to send emergency alert</string>
 
     <!-- Onboarding -->
     <string name="onboarding_title">Welcome to Rakshak</string>
     <string name="onboarding_subtitle">A personal safety tool that texts your trusted contacts when you need help.</string>
     <string name="onboarding_how_title">How it works</string>
-    <string name="onboarding_how_1">You trigger SOS with the button, the widget, Volume Guard or Voice Guard.</string>
+    <string name="onboarding_how_1">You start SOS with the button, the widget, the Quick Settings tile or Volume Guard. A 3-second countdown lets you cancel.</string>
     <string name="onboarding_how_2">Rakshak sends an SMS with your location to your emergency contacts.</string>
     <string name="onboarding_how_3">Messages are sent from your phone\'s SIM, so your carrier\'s SMS charges may apply.</string>
     <string name="disclaimer_title">Important</string>
@@ -37,20 +35,39 @@
     <string name="perm_location_approx">Approximate location is on. Allow precise for a more accurate map link.</string>
     <string name="perm_notifications_title">Show SOS status</string>
     <string name="perm_notifications_why">Shows whether your alert was sent, and the \"I\'m safe\" button.</string>
-    <string name="perm_mic_title">Microphone for Voice Guard</string>
     <string name="perm_status_allowed">Allowed</string>
     <string name="perm_status_blocked">Blocked. Turn it on in Settings.</string>
     <string name="action_allow">Allow</string>
     <string name="action_allow_precise">Allow precise</string>
     <string name="action_open_settings">Open Settings</string>
     <string name="action_not_now">Not now</string>
-    <string name="action_continue">Continue</string>
     <string name="action_done">Done</string>
-    <string name="voice_disclosure_title">Voice Guard needs the microphone</string>
-    <!-- The wake phrase really is the word "help" three times, so ignore the repeated-word check. -->
-    <string name="voice_disclosure_body" tools:ignore="Typos">While Voice Guard is on, Rakshak keeps listening through the microphone in the background and shows a notification. It listens for \"help help help\" and sends an SOS when it hears it.\n\nAudio is processed on this phone only. It is not recorded, stored or sent anywhere. Listening uses extra battery.</string>
-    <string name="voice_active_hint">Say \"help\" three times</string>
-    <string name="voice_blocked_body">Microphone access is blocked for Rakshak. Turn it on in Settings to use Voice Guard.</string>
+
+    <!-- Countdown (every trigger) -->
+    <string name="countdown_title">SOS in %1$d…</string>
+    <string name="countdown_text">Your emergency contacts will be alerted unless you cancel.</string>
+    <string name="countdown_cancel">Cancel</string>
+    <string name="countdown_send_now">Send now</string>
+    <string name="countdown_dialog_title">Emergency Alert</string>
+    <plurals name="countdown_dialog_seconds">
+        <item quantity="one">Sending alert in %1$d second</item>
+        <item quantity="other">Sending alert in %1$d seconds</item>
+    </plurals>
+
+    <!-- Volume Guard -->
+    <string name="volume_banner">Turn on Volume Guard\nPress both volume keys to start SOS</string>
+    <string name="volume_banner_action">Enable</string>
+    <string name="volume_card_title">Volume Guard</string>
+    <string name="volume_card_on">Press Vol Up + Down to start SOS</string>
+    <string name="volume_card_off">Turn on to activate</string>
+    <string name="volume_disclosure_title">Volume Guard uses an accessibility service</string>
+    <string name="volume_disclosure_body">To notice Volume Up and Volume Down pressed together, Rakshak needs its accessibility service turned on in Android Settings.\n\nThe service only watches those two keys. It does not read your screen, other apps, passwords or anything you type, and it sends no data anywhere.\n\nWhen you press both keys, a 3-second countdown starts and you can cancel it. If you do not turn this on, you can still use the SOS button, the widget and the Quick Settings tile.</string>
+    <string name="volume_disclosure_agree">I understand, open Settings</string>
+
+    <!-- Quick Settings tile -->
+    <string name="tile_label">Rakshak SOS</string>
+    <string name="tile_banner">Add the SOS tile to Quick Settings\nStart SOS from the notification shade</string>
+    <string name="tile_banner_action">Add</string>
 
     <!-- Home -->
     <string name="call_112">Call 112</string>
@@ -66,13 +83,23 @@
     <string name="about_location_body">Read only when you trigger SOS, using Google Play services. It is sent only inside the SMS to your contacts.</string>
     <string name="about_section_sms">SMS</string>
     <string name="about_sms_body">Alerts are sent from your SIM straight to your contacts. Rakshak has no server and cannot read your other messages.</string>
-    <string name="about_section_mic">Microphone (Voice Guard, optional)</string>
-    <string name="about_mic_body">Used only while Voice Guard is on. Audio is processed on the phone and is never recorded or sent.</string>
+    <string name="about_section_triggers">Ways to start SOS</string>
+    <string name="about_triggers_body">The SOS button, the home screen widget, the Quick Settings tile and Volume Guard. Each one starts a 3-second countdown with Cancel and Send now. Android may ask you to unlock your phone before it runs a Quick Settings tile. Rakshak does not use the microphone.</string>
     <string name="about_section_access">Accessibility service (Volume Guard, optional)</string>
-    <string name="about_access_body">Used only to notice Volume Up and Volume Down pressed together. Rakshak does not read your screen.</string>
+    <string name="about_access_body">Used only to notice Volume Up and Volume Down pressed together, then start the SOS countdown. It does not read your screen, other apps or anything you type.</string>
     <string name="about_section_none">What Rakshak does not do</string>
     <string name="about_none_body">No account, no analytics, no ads, and no data sent to the developer. The app does not request internet permission.</string>
     <string name="about_section_disclaimer">Not a replacement for emergency services</string>
     <string name="about_disclaimer_body">Rakshak is a helper, not a guarantee. SMS can fail or be delayed. If you are in danger, call 112 (or your local emergency number) first whenever you can.</string>
     <string name="about_back">Back</string>
+
+    <!-- Widget -->
+    <string name="widget_app_name">RAKSHAK</string>
+    <string name="widget_sos_label">SOS</string>
+    <string name="widget_loading">Loading contacts…</string>
+    <string name="widget_no_contacts">No contacts added</string>
+    <plurals name="widget_contacts">
+        <item quantity="one">%1$d contact will receive alert</item>
+        <item quantity="other">%1$d contacts will receive alert</item>
+    </plurals>
 </resources>

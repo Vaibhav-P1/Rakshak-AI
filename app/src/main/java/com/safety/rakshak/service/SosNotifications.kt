@@ -31,7 +31,37 @@ class SosNotifications(private val context: Context) {
         val channel = NotificationChannel(CHANNEL_ID, "SOS Alerts", NotificationManager.IMPORTANCE_HIGH)
             .apply { description = "Emergency SOS progress and results" }
         manager.createNotificationChannel(channel)
+        // Heads-up and a short vibration so the countdown is noticed, but no sound.
+        val countdownChannel = NotificationChannel(
+            COUNTDOWN_CHANNEL_ID, "SOS countdown", NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "The few seconds before an SOS is sent, with a Cancel button"
+            enableVibration(true)
+            vibrationPattern = longArrayOf(0, 250, 120, 250)
+            setSound(null, null)
+        }
+        manager.createNotificationChannel(countdownChannel)
     }
+
+    /**
+     * The countdown shown for every trigger. Public visibility so Cancel and Send now
+     * are usable from the lock screen.
+     */
+    fun countdown(secondsLeft: Int): Notification =
+        NotificationCompat.Builder(context, COUNTDOWN_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(context.getString(R.string.countdown_title, secondsLeft))
+            .setContentText(context.getString(R.string.countdown_text))
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setContentIntent(openAppAction())
+            .addAction(0, context.getString(R.string.countdown_cancel), serviceAction(SOSService.ACTION_CANCEL_COUNTDOWN, REQUEST_CANCEL))
+            .addAction(0, context.getString(R.string.countdown_send_now), serviceAction(SOSService.ACTION_SEND_NOW, REQUEST_SEND_NOW))
+            .build()
 
     fun progress(text: String): Notification =
         base("SOS in progress", text)
@@ -169,6 +199,12 @@ class SosNotifications(private val context: Context) {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     )
 
+    private fun serviceAction(action: String, requestCode: Int): PendingIntent = PendingIntent.getService(
+        context, requestCode,
+        Intent(context, SOSService::class.java).setAction(action),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+    )
+
     private fun openAppAction(): PendingIntent = PendingIntent.getActivity(
         context, REQUEST_OPEN_APP,
         Intent(context, MainActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
@@ -194,11 +230,14 @@ class SosNotifications(private val context: Context) {
     companion object {
         private const val TAG = "SosNotifications"
         const val CHANNEL_ID = "sos_channel"
+        const val COUNTDOWN_CHANNEL_ID = "sos_countdown_channel"
         const val PROGRESS_ID = 2001
         const val RESULT_ID = 2002
         private const val REQUEST_SAFE = 10
         private const val REQUEST_OPEN_APP = 11
         private const val REQUEST_DIAL = 12
         private const val REQUEST_SMS_APP = 13
+        private const val REQUEST_CANCEL = 14
+        private const val REQUEST_SEND_NOW = 15
     }
 }

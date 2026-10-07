@@ -13,7 +13,11 @@ import android.util.Log
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.safety.rakshak.data.RakshakDatabase
+import com.safety.rakshak.sos.CountdownResult
+import com.safety.rakshak.sos.CountdownState
+import com.safety.rakshak.sos.SosCountdown
 import com.safety.rakshak.sos.SosOrchestrator
+import com.safety.rakshak.sos.SosRuntime
 import com.safety.rakshak.sos.SosSource
 import com.safety.rakshak.sos.normalizePhoneNumber
 import com.safety.rakshak.sos.platform.SosPlatform
@@ -26,7 +30,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
- * Runs the SOS pipeline ([SosOrchestrator]) as a foreground service.
+ * Runs the SOS pipeline as a foreground service: every trigger goes
+ * trigger() -> [SosCountdown] -> [SosOrchestrator]. Nothing is sent (and no session is
+ * created) until the countdown completes, except when an interrupted SOS is being resumed.
  *
  * The service never aborts the SOS because of the foreground-service type: it
  * tries the `location` type and falls back to `shortService` (Android 14+).
@@ -45,6 +51,8 @@ class SOSService : Service() {
         private const val TAG = "SOSService"
         const val ACTION_TRIGGER_SOS = "TRIGGER_SOS"
         const val ACTION_SAFE = "com.safety.rakshak.action.SOS_SAFE"
+        const val ACTION_CANCEL_COUNTDOWN = "com.safety.rakshak.action.CANCEL_COUNTDOWN"
+        const val ACTION_SEND_NOW = "com.safety.rakshak.action.SEND_NOW"
         const val EXTRA_SOURCE = "source"
 
         /**
@@ -86,17 +94,31 @@ class SOSService : Service() {
                 START_NOT_STICKY
             }
             ACTION_TRIGGER_SOS -> {
-                goForeground(notifications.progress("Sending emergency alert..."))
                 if (sosJob?.isActive == true) {
+                    // Already counting down or sending: the foreground notification is in place.
                     Log.d(TAG, "SOS already running; duplicate trigger ignored")
                 } else {
+                    // Only a redelivery after the process was killed may skip the countdown: that SOS
+                    // was already confirmed. A fresh trigger always gets one, even if a stale session exists.
+                    val resuming = (flags and START_FLAG_REDELIVERY) != 0 && orchestrator.hasResumableSession()
+                    goForeground(
+                        if (resuming) notifications.progress("Sending emergency alert...")
+                        else notifications.countdown(SosCountdown.DEFAULT_SECONDS)
+                    )
                     val source = intent.getStringExtra(EXTRA_SOURCE)
                         ?.let { name -> SosSource.entries.firstOrNull { it.name == name } }
                         ?: SosSource.APP_BUTTON
-                    startSos(source)
+                    startSos(source, countdown = !resuming)
                 }
                 // If the process is killed mid-SOS, the system redelivers this intent
                 // and the orchestrator resumes the persisted session.
+                START_REDELIVER_INTENT
+            }
+            ACTION_CANCEL_COUNTDOWN, ACTION_SEND_NOW -> {
+                if (intent.action == ACTION_CANCEL_COUNTDOWN) SosRuntime.countdown.cancel()
+                else SosRuntime.countdown.sendNow()
+                if (sosJob?.isActive != true) finishIfIdle() // stale notification action
+                // Not START_NOT_STICKY: that would stop the system restarting a running SOS.
                 START_REDELIVER_INTENT
             }
             else -> {
@@ -107,10 +129,15 @@ class SOSService : Service() {
         }
     }
 
-    private fun startSos(source: SosSource) {
+    private fun startSos(source: SosSource, countdown: Boolean) {
         runningWork++
         sosJob = scope.launch {
             try {
+                if (countdown && !awaitCountdown(source)) {
+                    Log.d(TAG, "SOS cancelled during the countdown; nothing was sent")
+                    return@launch
+                }
+                notifications.notify(SosNotifications.PROGRESS_ID, notifications.progress("Sending emergency alert..."))
                 val outcome = orchestrator.run(source) { notifications.updateProgress(it) }
                 notifications.showOutcome(outcome, contactNumbers())
             } catch (e: CancellationException) {
@@ -122,6 +149,23 @@ class SOSService : Service() {
                 runningWork--
                 finishIfIdle()
             }
+        }
+    }
+
+    /** Runs the one countdown, mirroring it in the notification. True if the SOS should be sent. */
+    private suspend fun awaitCountdown(source: SosSource): Boolean {
+        val countdown = SosRuntime.countdown
+        val ticker = scope.launch {
+            countdown.state.collect { state ->
+                if (state is CountdownState.Counting) {
+                    notifications.notify(SosNotifications.PROGRESS_ID, notifications.countdown(state.secondsLeft))
+                }
+            }
+        }
+        try {
+            return countdown.run(source) == CountdownResult.COMPLETED
+        } finally {
+            ticker.cancel()
         }
     }
 

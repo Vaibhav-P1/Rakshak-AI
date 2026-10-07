@@ -62,7 +62,7 @@ fun AboutScreen(onNavigateBack: () -> Unit) {
                 Section(R.string.about_section_data, R.string.about_data_body)
                 Section(R.string.about_section_location, R.string.about_location_body)
                 Section(R.string.about_section_sms, R.string.about_sms_body)
-                Section(R.string.about_section_mic, R.string.about_mic_body)
+                Section(R.string.about_section_triggers, R.string.about_triggers_body)
                 Section(R.string.about_section_access, R.string.about_access_body)
                 Spacer(Modifier.height(24.dp))
             }

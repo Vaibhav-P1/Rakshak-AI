@@ -3,8 +3,9 @@ package com.safety.rakshak.ui
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.app.StatusBarManager
+import android.content.ComponentName
 import android.os.Build
-import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,7 +42,9 @@ import com.safety.rakshak.permissions.locationPrecision
 import com.safety.rakshak.permissions.rememberPermissionRequester
 import com.safety.rakshak.permissions.state
 import com.safety.rakshak.service.SOSService
-import com.safety.rakshak.service.VoiceGuardService
+import com.safety.rakshak.service.SosTileService
+import com.safety.rakshak.sos.CountdownState
+import com.safety.rakshak.sos.SosRuntime
 import com.safety.rakshak.sos.SosSource
 import com.safety.rakshak.viewmodel.MainViewModel
 
@@ -67,50 +71,26 @@ fun HomeScreen(
     val context        = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val contacts       by viewModel.contacts.collectAsState()
-    val isVoiceActive  by viewModel.isVoiceGuardActive.collectAsState()
+    val countdownState by SosRuntime.countdown.state.collectAsState()
 
-    // Saveable so a rotation during the countdown doesn't silently cancel the SOS.
-    var showSOSDialog      by rememberSaveable { mutableStateOf(false) }
-    var sosCountdown       by rememberSaveable { mutableIntStateOf(3) }
-    var isBatteryOptimized by remember { mutableStateOf(false) }
     var isAccessibilityOn  by remember { mutableStateOf(false) }
+    var showVolumeDisclosure by rememberSaveable { mutableStateOf(false) }
 
     // ── Permissions: asked in context, never blocking the app ─────
     val tracker = remember { PermissionTracker(context) }
     val appPrefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
     var permRefresh by remember { mutableIntStateOf(0) }
     var showSetup by rememberSaveable { mutableStateOf(false) }
-    var showVoiceDisclosure by rememberSaveable { mutableStateOf(false) }
-    var pendingVoiceEnable by remember { mutableStateOf(false) }
+    var tilePrompted by remember { mutableStateOf(appPrefs.getBoolean("tile_prompted", false)) }
 
     val permStates = remember(permRefresh) { SetupItem.entries.associateWith { it.state(context, tracker) } }
     val precision = remember(permRefresh) { locationPrecision(context) }
     val smsGranted = permStates[SetupItem.SMS] == GrantState.GRANTED
-    val needsSetup = SetupItem.entries.any { it.inSetupList && permStates[it] != GrantState.GRANTED }
+    val needsSetup = SetupItem.entries.any { permStates[it] != GrantState.GRANTED }
 
-    val setVoiceGuard: (Boolean) -> Unit = { enable ->
-        viewModel.setVoiceGuardActive(enable)
-        val intent = Intent(context, VoiceGuardService::class.java).apply {
-            action = if (enable) VoiceGuardService.ACTION_START_VOICE_GUARD
-            else VoiceGuardService.ACTION_STOP_VOICE_GUARD
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            context.startForegroundService(intent)
-        else
-            context.startService(intent)
-    }
-
-    val requester = rememberPermissionRequester {
-        permRefresh++
-        if (pendingVoiceEnable) {
-            pendingVoiceEnable = false
-            if (SetupItem.MICROPHONE.isGranted(context)) setVoiceGuard(true)
-        }
-    }
+    val requester = rememberPermissionRequester { permRefresh++ }
 
     val checkStates = {
-        val pm = context.getSystemService(PowerManager::class.java)
-        isBatteryOptimized = !pm.isIgnoringBatteryOptimizations(context.packageName)
         isAccessibilityOn  = isAccessibilityServiceEnabled(context)
         permRefresh++ // permissions can change in system Settings while we are away
     }
@@ -165,38 +145,25 @@ fun HomeScreen(
         )
     }
 
-    if (showVoiceDisclosure) {
-        VoiceGuardDisclosureDialog(
-            blocked = permStates[SetupItem.MICROPHONE] == GrantState.NEEDS_SETTINGS,
-            onContinue = {
-                showVoiceDisclosure = false
-                pendingVoiceEnable = true
-                requester.request(SetupItem.MICROPHONE)
+    if (showVolumeDisclosure) {
+        VolumeGuardDisclosureDialog(
+            onAgree = {
+                showVolumeDisclosure = false
+                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             },
-            onOpenSettings = { showVoiceDisclosure = false; requester.openSettings() },
-            onDismiss = { showVoiceDisclosure = false },
+            onDismiss = { showVolumeDisclosure = false },
         )
     }
 
-    // SOS Countdown dialog
-    if (showSOSDialog) {
-        LaunchedEffect(sosCountdown) {
-            if (sosCountdown > 0) {
-                kotlinx.coroutines.delay(1000)
-                sosCountdown--
-            } else {
-                showSOSDialog = false
-                sosCountdown = 3
-                triggerSOS(context)
-            }
-        }
-
+    // The countdown itself lives in SOSService / SosCountdown (the same one every trigger uses).
+    // This dialog only shows it, so it also appears when the SOS was started by the widget, tile or volume keys.
+    (countdownState as? CountdownState.Counting)?.let { counting ->
         AlertDialog(
-            onDismissRequest = { showSOSDialog = false; sosCountdown = 3 },
+            onDismissRequest = { SosRuntime.countdown.cancel() },
             containerColor   = SurfaceCard,
             shape            = RoundedCornerShape(28.dp),
             title = {
-                Text("Emergency Alert", color = TextPrimary,
+                Text(stringResource(R.string.countdown_dialog_title), color = TextPrimary,
                     fontWeight = FontWeight.Bold, fontSize = 20.sp)
             },
             text = {
@@ -205,11 +172,13 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Spacer(Modifier.height(8.dp))
-                    Text("$sosCountdown", fontSize = 80.sp,
+                    Text("${counting.secondsLeft}", fontSize = 80.sp,
                         fontWeight = FontWeight.Black, color = SOSRed, lineHeight = 80.sp)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Sending alert in $sosCountdown second${if (sosCountdown != 1) "s" else ""}",
+                        context.resources.getQuantityString(
+                            R.plurals.countdown_dialog_seconds, counting.secondsLeft, counting.secondsLeft
+                        ),
                         color = TextSecondary, fontSize = 14.sp, textAlign = TextAlign.Center
                     )
                     Spacer(Modifier.height(8.dp))
@@ -217,21 +186,17 @@ fun HomeScreen(
             },
             confirmButton = {
                 Button(
-                    onClick = {
-                        showSOSDialog = false
-                        sosCountdown = 3
-                        triggerSOS(context)
-                    },
+                    onClick = { SosRuntime.countdown.sendNow() },
                     colors  = ButtonDefaults.buttonColors(containerColor = SOSRed),
                     shape   = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
-                ) { Text("Send Now", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+                ) { Text(stringResource(R.string.countdown_send_now), fontWeight = FontWeight.Bold, fontSize = 16.sp) }
             },
             dismissButton = {
                 TextButton(
-                    onClick  = { showSOSDialog = false; sosCountdown = 3 },
+                    onClick  = { SosRuntime.countdown.cancel() },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
-                ) { Text("Cancel", color = TextSecondary, fontSize = 15.sp) }
+                ) { Text(stringResource(R.string.countdown_cancel), color = TextSecondary, fontSize = 15.sp) }
             }
         )
     }
@@ -275,59 +240,40 @@ fun HomeScreen(
                 Spacer(Modifier.height(10.dp))
             }
 
-            // Battery optimization warning
-            if (isBatteryOptimized && isVoiceActive) {
-                WarningBanner(
-                    icon = Icons.Default.BatteryAlert,
-                    message = "Disable battery optimization\nfor background detection",
-                    buttonText = "Fix",
-                    color = AccentOrange,
-                    onClick = {
-                        // Opens the system list (no special permission needed); the user picks Rakshak.
-                        context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                    }
-                )
-                Spacer(Modifier.height(10.dp))
-            }
-
-            // Accessibility warning
+            // Volume Guard: explain what the accessibility service does BEFORE opening Settings.
             if (!isAccessibilityOn) {
                 WarningBanner(
                     icon       = Icons.Default.VolumeUp,
-                    message    = "Enable Accessibility Service\nfor Volume key SOS trigger",
-                    buttonText = "Enable",
+                    message    = stringResource(R.string.volume_banner),
+                    buttonText = stringResource(R.string.volume_banner_action),
                     color      = AccentGreen,
-                    onClick    = {
-                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                    }
+                    onClick    = { showVolumeDisclosure = true }
                 )
                 Spacer(Modifier.height(10.dp))
             }
 
-            // Voice Guard card
-            GuardToggleCard(
-                icon     = Icons.Default.Mic,
-                title    = "Voice Guard",
-                subtitle = if (isVoiceActive) stringResource(R.string.voice_active_hint) else "Tap to enable",
-                isActive = isVoiceActive,
-                onToggle = { checked ->
-                    when {
-                        !checked -> setVoiceGuard(false)
-                        permStates[SetupItem.MICROPHONE] == GrantState.GRANTED -> setVoiceGuard(true)
-                        // Explain the always-on microphone BEFORE the system dialog.
-                        else -> showVoiceDisclosure = true
+            // Quick Settings tile: Android 13+ can add it with one tap.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !tilePrompted) {
+                WarningBanner(
+                    icon       = Icons.Default.Add,
+                    message    = stringResource(R.string.tile_banner),
+                    buttonText = stringResource(R.string.tile_banner_action),
+                    color      = AccentGreen,
+                    onClick    = {
+                        requestSosTile(context) {
+                            appPrefs.edit { putBoolean("tile_prompted", true) }
+                            tilePrompted = true
+                        }
                     }
-                }
-            )
-
-            Spacer(Modifier.height(10.dp))
+                )
+                Spacer(Modifier.height(10.dp))
+            }
 
             // Volume Guard card
             GuardStatusCard(
                 icon     = Icons.Default.VolumeUp,
-                title    = "Volume Guard",
-                subtitle = if (isAccessibilityOn) "Press Vol Up + Down to trigger SOS"
-                else "Enable accessibility service to activate",
+                title    = stringResource(R.string.volume_card_title),
+                subtitle = stringResource(if (isAccessibilityOn) R.string.volume_card_on else R.string.volume_card_off),
                 isActive = isAccessibilityOn
             )
 
@@ -348,7 +294,7 @@ fun HomeScreen(
                 }
                 Button(
                     // Without SMS permission SOS cannot send anything: guide the user instead.
-                    onClick   = { if (smsGranted) showSOSDialog = true else showSetup = true },
+                    onClick   = { if (smsGranted) SOSService.trigger(context, SosSource.APP_BUTTON) else showSetup = true },
                     modifier  = Modifier.size(sosSize),
                     shape     = CircleShape,
                     enabled   = contacts.isNotEmpty(),
@@ -493,48 +439,6 @@ private fun WarningBanner(
 }
 
 @Composable
-private fun GuardToggleCard(
-    icon     : ImageVector,
-    title    : String,
-    subtitle : String,
-    isActive : Boolean,
-    onToggle : (Boolean) -> Unit
-) {
-    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SurfaceCard)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment     = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))
-                    .background(if (isActive) AccentGreen.copy(0.15f) else StrokeColor),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(icon, null,
-                        tint     = if (isActive) AccentGreen else TextSecondary,
-                        modifier = Modifier.size(20.dp))
-                }
-                Spacer(Modifier.width(14.dp))
-                Column {
-                    Text(title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                    Text(subtitle, color = if (isActive) AccentGreen else TextSecondary, fontSize = 12.sp)
-                }
-            }
-            Switch(
-                checked         = isActive,
-                onCheckedChange = onToggle,
-                colors          = SwitchDefaults.colors(
-                    checkedThumbColor   = Color.White,
-                    checkedTrackColor   = AccentGreen,
-                    uncheckedThumbColor = TextSecondary,
-                    uncheckedTrackColor = StrokeColor
-                )
-            )
-        }
-    }
-}
-
-@Composable
 private fun GuardStatusCard(
     icon     : ImageVector,
     title    : String,
@@ -580,6 +484,13 @@ fun isAccessibilityServiceEnabled(context: android.content.Context): Boolean {
     }
 }
 
-private fun triggerSOS(context: android.content.Context) {
-    SOSService.trigger(context, SosSource.APP_BUTTON)
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+private fun requestSosTile(context: Context, onDone: () -> Unit) {
+    val statusBar = context.getSystemService(StatusBarManager::class.java)
+    statusBar.requestAddTileService(
+        ComponentName(context, SosTileService::class.java),
+        context.getString(R.string.tile_label),
+        android.graphics.drawable.Icon.createWithResource(context, R.drawable.ic_tile_sos),
+        context.mainExecutor,
+    ) { onDone() }
 }

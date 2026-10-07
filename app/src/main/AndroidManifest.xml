@@ -6,12 +6,9 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.SEND_SMS" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- Telephony feature for SMS -->
     <uses-feature
@@ -40,13 +37,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Voice Guard Service -->
-        <service
-            android:name=".service.VoiceGuardService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="microphone" />
-
         <!-- SOS Service. "location" is used when location permission allows it;
              "shortService" (Android 14+) is the fallback so the SOS SMS never
              depends on being allowed to start a location foreground service. -->
@@ -68,6 +58,19 @@
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!-- Quick Settings tile. Exported only because the system must bind it; the
+             BIND_QUICK_SETTINGS_TILE permission restricts that to the system. -->
+        <service
+            android:name=".service.SosTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_sos"
+            android:label="@string/tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
         </service>
 
         <!-- SOS Widget -->

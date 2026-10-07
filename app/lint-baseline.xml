@@ -201,28 +201,6 @@
 
     <issue
         id="ObsoleteSdkInt"
-        message="Unnecessary; SDK_INT is always >= 26"
-        errorLine1="        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/safety/rakshak/ui/HomeScreen.kt"
-            line="97"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; SDK_INT is always >= 26"
-        errorLine1="        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/safety/rakshak/service/VoiceGuardService.kt"
-            line="284"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
         message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 26. Merge all the resources in this folder into `mipmap-anydpi`.">
         <location
             file="src/main/res/mipmap-anydpi-v26"/>
@@ -241,23 +219,12 @@
 
     <issue
         id="UnusedResources"
-        message="The resource `R.string.voice_guard` appears to be unused"
-        errorLine1="    &lt;string name=&quot;voice_guard&quot;>Voice Guard&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="4"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
         message="The resource `R.string.emergency_contacts` appears to be unused"
         errorLine1="    &lt;string name=&quot;emergency_contacts&quot;>Emergency Contacts&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="5"
+            line="4"
             column="13"/>
     </issue>
 
@@ -268,7 +235,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="6"
+            line="5"
             column="13"/>
     </issue>
 
@@ -279,18 +246,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="7"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.listening` appears to be unused"
-        errorLine1="    &lt;string name=&quot;listening&quot;>Listening for \&apos;Help Rakshak\&apos;&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="8"
+            line="6"
             column="13"/>
     </issue>
 
@@ -314,39 +270,6 @@
             file="src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml"
             line="2"
             column="1"/>
-    </issue>
-
-    <issue
-        id="HardcodedText"
-        message="Hardcoded string &quot;RAKSHAK&quot;, should use `@string` resource"
-        errorLine1="        android:text=&quot;RAKSHAK&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/widget_sos.xml"
-            line="16"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="HardcodedText"
-        message="Hardcoded string &quot;SOS&quot;, should use `@string` resource"
-        errorLine1="        android:text=&quot;SOS&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/widget_sos.xml"
-            line="29"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="HardcodedText"
-        message="Hardcoded string &quot;Loading contacts...&quot;, should use `@string` resource"
-        errorLine1="        android:text=&quot;Loading contacts...&quot;"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/widget_sos.xml"
-            line="42"
-            column="9"/>
     </issue>
 
 </issues>

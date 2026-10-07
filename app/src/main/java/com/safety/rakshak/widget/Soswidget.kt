@@ -3,6 +3,7 @@ package com.safety.rakshak.widget
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
@@ -19,6 +20,13 @@ class SOSWidget : AppWidgetProvider() {
 
     companion object {
         const val ACTION_WIDGET_SOS = "com.safety.rakshak.WIDGET_SOS"
+
+        /** Redraws every placed widget, e.g. after the contacts changed. */
+        fun refreshAll(context: Context) {
+            val manager = AppWidgetManager.getInstance(context)
+            manager.getAppWidgetIds(ComponentName(context, SOSWidget::class.java))
+                .forEach { updateWidget(context, manager, it) }
+        }
     }
 
     override fun onUpdate(
@@ -40,6 +48,7 @@ class SOSWidget : AppWidgetProvider() {
 
     private fun triggerSOSFromWidget(context: Context) {
         // A widget tap counts as user interaction, so the foreground start is allowed.
+        // The service shows the 3-second countdown; nothing is sent until it completes.
         SOSService.trigger(context, SosSource.WIDGET)
     }
 }
@@ -75,8 +84,8 @@ fun updateWidget(
         withContext(Dispatchers.Main) {
             views.setTextViewText(
                 R.id.widget_contact_count,
-                if (count == 0) "No contacts added"
-                else "$count contact${if (count > 1) "s" else ""} will receive alert"
+                if (count == 0) context.getString(R.string.widget_no_contacts)
+                else context.resources.getQuantityString(R.plurals.widget_contacts, count, count)
             )
             appWidgetManager.updateAppWidget(widgetId, views)
         }

@@ -28,26 +28,21 @@ enum class SetupItem(
     val permissions: List<String>,
     /** True if SOS cannot work without it. */
     val required: Boolean,
-    /** False for permissions asked only at the moment a feature is switched on. */
-    val inSetupList: Boolean,
 ) {
-    SMS(listOf(Manifest.permission.SEND_SMS), required = true, inSetupList = true),
+    SMS(listOf(Manifest.permission.SEND_SMS), required = true),
 
     // Fine and coarse are requested together so Android 12+ shows the precise/approximate
     // choice. Either one is enough for SOS.
     LOCATION(
         listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
-        required = false, inSetupList = true,
+        required = false,
     ),
     NOTIFICATIONS(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             listOf(Manifest.permission.POST_NOTIFICATIONS)
         } else emptyList(),
-        required = false, inSetupList = true,
-    ),
-
-    /** Only requested when the user turns on Voice Guard. */
-    MICROPHONE(listOf(Manifest.permission.RECORD_AUDIO), required = false, inSetupList = false);
+        required = false,
+    );
 
     fun isGranted(context: Context): Boolean = when {
         permissions.isEmpty() -> true // POST_NOTIFICATIONS before Android 13

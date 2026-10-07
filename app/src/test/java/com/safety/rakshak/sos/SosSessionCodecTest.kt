@@ -33,6 +33,12 @@ class SosSessionCodecTest {
     }
 
     @Test
+    fun `a session written by an older version with a removed source still decodes`() {
+        val old = SosSessionCodec.encode(session) + ("source" to "VOICE")
+        assertEquals(session.copy(source = SosSource.APP_BUTTON), SosSessionCodec.decode(old))
+    }
+
+    @Test
     fun `empty or corrupt data decodes to null instead of crashing`() {
         assertNull(SosSessionCodec.decode(emptyMap()))
         val corrupt = SosSessionCodec.encode(session) + ("phase" to "NOT_A_PHASE")

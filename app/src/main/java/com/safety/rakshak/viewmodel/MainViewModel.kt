@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.safety.rakshak.data.EmergencyContact
 import com.safety.rakshak.data.EmergencyContactRepository
 import com.safety.rakshak.data.RakshakDatabase
+import com.safety.rakshak.widget.SOSWidget
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,15 +19,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _contacts = MutableStateFlow<List<EmergencyContact>>(emptyList())
     val contacts: StateFlow<List<EmergencyContact>> = _contacts.asStateFlow()
 
-    private val _isVoiceGuardActive = MutableStateFlow(false)
-    val isVoiceGuardActive: StateFlow<Boolean> = _isVoiceGuardActive.asStateFlow()
-
     init {
         val database = RakshakDatabase.getDatabase(application)
         repository = EmergencyContactRepository(database.emergencyContactDao())
         viewModelScope.launch {
             repository.allContacts.collect { contactList ->
                 _contacts.value = contactList
+                // Keep the home screen widget's contact count current.
+                SOSWidget.refreshAll(application)
             }
         }
     }
@@ -45,9 +45,5 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deleteContact(contact: EmergencyContact) {
         viewModelScope.launch { repository.deleteContact(contact) }
-    }
-
-    fun setVoiceGuardActive(active: Boolean) {
-        _isVoiceGuardActive.value = active
     }
 }

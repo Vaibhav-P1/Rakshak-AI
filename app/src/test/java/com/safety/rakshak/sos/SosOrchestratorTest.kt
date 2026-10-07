@@ -195,14 +195,29 @@ class SosOrchestratorTest {
 
     @Test
     fun `session is persisted as pending before sending and completed at the end`() = runTest {
-        orchestrator().run(SosSource.VOICE)
+        orchestrator().run(SosSource.TILE)
         val first = store.history.first()
         assertEquals(SosPhase.ALERTING, first.phase)
         assertTrue(first.alertStatus.values.all { it == ContactStatus.PENDING })
         val last = store.session!!
         assertEquals(SosPhase.COMPLETED, last.phase)
-        assertEquals(SosSource.VOICE, last.source)
+        assertEquals(SosSource.TILE, last.source)
         assertTrue(last.alertStatus.values.all { it == ContactStatus.SENT })
+    }
+
+    @Test
+    fun `an active recent session is reported as resumable, a finished or old one is not`() {
+        val active = SosSession(
+            id = "s", source = SosSource.WIDGET, startedAtMillis = now - 60_000L,
+            phase = SosPhase.LOCATING, alertStatus = mapOf(aliceNumber to ContactStatus.SENT),
+        )
+        assertFalse(orchestrator().hasResumableSession())
+        store.session = active
+        assertTrue(orchestrator().hasResumableSession())
+        store.session = active.copy(phase = SosPhase.COMPLETED)
+        assertFalse(orchestrator().hasResumableSession())
+        store.session = active.copy(startedAtMillis = now - config.resumeWindowMillis - 1)
+        assertFalse(orchestrator().hasResumableSession())
     }
 
     @Test

@@ -1,12 +1,12 @@
 # Rakshak — Privacy Policy
 
 > **DRAFT for the app owner to review before publishing.**
-> Fill in the two placeholders marked `TODO`, have the text checked against the final release build, and host it at a public URL (for example GitHub Pages) for the Play Console. It describes what the code does at the time of writing (Phase 2); update it whenever behavior changes.
+> Fill in the two placeholders marked `TODO`, have the text checked against the final release build, and host it at a public URL (for example GitHub Pages) for the Play Console. It describes what the code does at the time of writing (Phase 3); update it whenever behavior changes.
 
 **Effective date:** TODO (date of first release)
 **Developer / contact:** TODO (name and support email address)
 
-Rakshak is a personal safety app. When you trigger SOS, it sends an SMS with your location to the emergency contacts you chose. This policy explains what the app does with your information.
+Rakshak is a personal safety app. When you trigger SOS (with the app button, the home screen widget, the Quick Settings tile or Volume Guard), a 3-second countdown starts that you can cancel. Then it sends an SMS with your location to the emergency contacts you chose. This policy explains what the app does with your information.
 
 ## In short
 
@@ -22,8 +22,7 @@ Rakshak is a personal safety app. When you trigger SOS, it sends an SMS with you
 | **Your location** | To add a map link to your alert | Read only when you trigger SOS, using Google Play services. It is placed in the SMS sent to your contacts. Rakshak does not store location history |
 | **SMS messages you send through the app** | The SOS alert, the location follow-up and "I'm safe" | Sent from your SIM to your contacts through your mobile carrier. Your carrier's own terms apply, and normal SMS charges may apply |
 | **Status of your most recent SOS** (which contacts were alerted, and whether it succeeded) | To finish an SOS if the app is interrupted, and to show you the result | Stored on your phone only; replaced by the next SOS; **not** included in backups |
-| **Microphone audio** (only if you turn on Voice Guard) | To listen for the phrase "help help help" | Processed on your phone in real time. **It is not recorded, stored or sent anywhere.** Recognized words are not logged |
-| **Volume button presses** (only if you turn on the Volume Guard accessibility service) | To notice Volume Up and Volume Down pressed together | Used on the phone only. Rakshak does not read your screen or what you type |
+| **Volume button presses** (only if you turn on the Volume Guard accessibility service) | To notice Volume Up and Volume Down pressed together, then start the SOS countdown | Used on the phone only. The service watches only those two keys. Rakshak does not read your screen, other apps or what you type |
 
 ## Permissions and why they are requested
 
@@ -32,9 +31,10 @@ Rakshak asks for each permission only when it is needed, and explains it first.
 - **Send SMS** — to text your emergency contacts. Required for SOS to work.
 - **Location (precise or approximate)** — to add your location to the alert. Optional; approximate works too.
 - **Notifications** — to show SOS progress and the "I'm safe" button. Optional.
-- **Microphone** — only for Voice Guard. Optional.
-- **Accessibility service** — only for Volume Guard. Optional, and enabled by you in Android settings.
-- **Foreground service, wake lock** — to keep an SOS or Voice Guard running while the screen is off.
+- **Accessibility service** — only for Volume Guard, to notice the two volume keys pressed together. Optional, and enabled by you in Android settings after an explanation.
+- **Foreground service** — to keep an SOS running while the screen is off.
+
+Rakshak does **not** use the microphone, and does not record or listen to audio.
 
 You can withdraw any permission at any time in Android Settings. Without a permission, the matching feature stops working.
 

@@ -155,10 +155,22 @@ class SosOrchestrator(
         )
     }
 
+    /**
+     * True if an interrupted SOS would be resumed by [run]. The caller skips the
+     * countdown in that case: the user already confirmed this SOS and contacts may
+     * still be waiting for it.
+     */
+    fun hasResumableSession(): Boolean = resumableSession() != null
+
+    private fun resumableSession(): SosSession? {
+        val now = clock.nowMillis()
+        return store.load()
+            ?.takeIf { it.isActive && now - it.startedAtMillis in 0..config.resumeWindowMillis }
+    }
+
     private fun resumeOrStart(source: SosSource, numbers: List<String>): SosSession {
         val now = clock.nowMillis()
-        val existing = store.load()
-            ?.takeIf { it.isActive && now - it.startedAtMillis in 0..config.resumeWindowMillis }
+        val existing = resumableSession()
 
         if (existing != null) {
             // Contacts added since the interrupted session also get the alert.

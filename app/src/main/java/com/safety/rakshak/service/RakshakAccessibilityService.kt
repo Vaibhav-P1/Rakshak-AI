@@ -1,88 +1,55 @@
 package com.safety.rakshak.service
 
 import android.accessibilityservice.AccessibilityService
-import android.accessibilityservice.AccessibilityServiceInfo
-import android.os.Handler
-import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import com.safety.rakshak.sos.SosSource
+import com.safety.rakshak.sos.VolumeChordDetector
+import com.safety.rakshak.sos.VolumeChordDetector.Decision
+import com.safety.rakshak.sos.VolumeChordDetector.Key
 
+/**
+ * Volume Guard. Uses the accessibility API only to filter key events: the service
+ * declares no event types and cannot read window content (see
+ * res/xml/accessibility_service_config.xml). Pressing Volume Up + Down together starts
+ * the same SOS countdown as every other trigger.
+ */
 class RakshakAccessibilityService : AccessibilityService() {
 
-    private val mainHandler = Handler(Looper.getMainLooper())
-
-    private var volumeUpPressed     = false
-    private var volumeDownPressed   = false
-    private var sosAlreadyTriggered = false
-
-    private val resetTriggerLock = Runnable { sosAlreadyTriggered = false }
+    private val chord = VolumeChordDetector()
 
     companion object {
         private const val TAG = "RakshakAccessibility"
     }
 
-    override fun onServiceConnected() {
-        super.onServiceConnected()
-        // Explicitly rebuild serviceInfo — this is required for locked screen
-        // Some devices ignore XML config for key events when screen is off
-        val info = AccessibilityServiceInfo().apply {
-            eventTypes          = AccessibilityEvent.TYPES_ALL_MASK
-            feedbackType        = AccessibilityServiceInfo.FEEDBACK_GENERIC
-            notificationTimeout = 100
-            // FLAG_REQUEST_FILTER_KEY_EVENTS — intercept volume keys
-            // FLAG_RETRIEVE_INTERACTIVE_WINDOWS — needed to stay active on lock screen
-            flags               = AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS or
-                    AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
-        }
-        serviceInfo = info
-        Log.d(TAG, "Accessibility service connected — key events active")
-    }
-
     override fun onKeyEvent(event: KeyEvent): Boolean {
-        val keyCode = event.keyCode
-
-        if (keyCode != KeyEvent.KEYCODE_VOLUME_UP &&
-            keyCode != KeyEvent.KEYCODE_VOLUME_DOWN) {
-            return false
+        val key = when (event.keyCode) {
+            KeyEvent.KEYCODE_VOLUME_UP -> Key.UP
+            KeyEvent.KEYCODE_VOLUME_DOWN -> Key.DOWN
+            else -> return false
+        }
+        val down = when (event.action) {
+            KeyEvent.ACTION_DOWN -> true
+            KeyEvent.ACTION_UP -> false
+            else -> return false
         }
 
-        when (event.action) {
-            KeyEvent.ACTION_DOWN -> {
-                if (keyCode == KeyEvent.KEYCODE_VOLUME_UP)   volumeUpPressed   = true
-                if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) volumeDownPressed = true
-
-                if (volumeUpPressed && volumeDownPressed && !sosAlreadyTriggered) {
-                    sosAlreadyTriggered = true
-                    mainHandler.removeCallbacks(resetTriggerLock)
-                    mainHandler.postDelayed(resetTriggerLock, 2000L)
-                    triggerSOS()
-                    return true
-                }
+        return when (chord.onKey(key, down, SystemClock.elapsedRealtime())) {
+            Decision.TRIGGER -> {
+                Log.d(TAG, "Volume Up + Down pressed together")
+                SOSService.trigger(this, SosSource.VOLUME_KEYS)
+                true
             }
-            KeyEvent.ACTION_UP -> {
-                if (keyCode == KeyEvent.KEYCODE_VOLUME_UP)   volumeUpPressed   = false
-                if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) volumeDownPressed = false
-            }
+            Decision.CONSUME -> true
+            Decision.PASS -> false
         }
-
-        return volumeUpPressed && volumeDownPressed
-    }
-
-    private fun triggerSOS() {
-        Log.d(TAG, "SOS triggered by Volume Up + Down")
-        SOSService.trigger(this, SosSource.VOLUME_KEYS)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
+
     override fun onInterrupt() {
         Log.d(TAG, "Accessibility service interrupted")
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        mainHandler.removeCallbacksAndMessages(null)
-        Log.d(TAG, "Accessibility service destroyed")
     }
 }

@@ -39,14 +39,12 @@ private fun SetupItem.titleRes() = when (this) {
     SetupItem.SMS -> R.string.perm_sms_title
     SetupItem.LOCATION -> R.string.perm_location_title
     SetupItem.NOTIFICATIONS -> R.string.perm_notifications_title
-    SetupItem.MICROPHONE -> R.string.perm_mic_title
 }
 
 private fun SetupItem.whyRes() = when (this) {
     SetupItem.SMS -> R.string.perm_sms_why
     SetupItem.LOCATION -> R.string.perm_location_why
     SetupItem.NOTIFICATIONS -> R.string.perm_notifications_why
-    SetupItem.MICROPHONE -> R.string.voice_disclosure_body
 }
 
 /**
@@ -71,7 +69,7 @@ fun SetupDialog(
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text(stringResource(R.string.setup_intro), color = C.TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
-                SetupItem.entries.filter { it.inSetupList }.forEach { item ->
+                SetupItem.entries.forEach { item ->
                     val state = states[item] ?: GrantState.CAN_ASK
                     // Fine location missing but coarse granted: offer the upgrade.
                     val approxOnly = item == SetupItem.LOCATION && state == GrantState.GRANTED &&
@@ -148,14 +146,12 @@ private fun StatusLine(textRes: Int) {
 }
 
 /**
- * Prominent disclosure for the always-on microphone. Shown every time before the
- * system permission dialog, and again if the permission is blocked.
+ * Prominent disclosure for the accessibility service. Always shown before the user is
+ * sent to Android's Accessibility settings, with an explicit confirmation.
  */
 @Composable
-fun VoiceGuardDisclosureDialog(
-    blocked: Boolean,
-    onContinue: () -> Unit,
-    onOpenSettings: () -> Unit,
+fun VolumeGuardDisclosureDialog(
+    onAgree: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
@@ -163,28 +159,23 @@ fun VoiceGuardDisclosureDialog(
         containerColor = C.Surface,
         shape = RoundedCornerShape(28.dp),
         title = {
-            Text(stringResource(R.string.voice_disclosure_title), color = C.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            Text(stringResource(R.string.volume_disclosure_title), color = C.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 20.sp)
         },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(
-                    stringResource(if (blocked) R.string.voice_blocked_body else R.string.voice_disclosure_body),
+                    stringResource(R.string.volume_disclosure_body),
                     color = C.TextSecondary, fontSize = 14.sp, lineHeight = 20.sp,
                 )
             }
         },
         confirmButton = {
             Button(
-                onClick = if (blocked) onOpenSettings else onContinue,
+                onClick = onAgree,
                 colors = ButtonDefaults.buttonColors(containerColor = C.Red),
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            ) {
-                Text(
-                    stringResource(if (blocked) R.string.action_open_settings else R.string.action_continue),
-                    fontWeight = FontWeight.Bold,
-                )
-            }
+            ) { Text(stringResource(R.string.volume_disclosure_agree), fontWeight = FontWeight.Bold) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {

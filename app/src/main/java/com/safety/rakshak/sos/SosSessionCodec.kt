@@ -30,7 +30,9 @@ object SosSessionCodec {
     fun decode(values: Map<String, String>): SosSession? = try {
         SosSession(
             id = values.getValue(KEY_ID),
-            source = SosSource.valueOf(values.getValue(KEY_SOURCE)),
+            // A source removed in a later version (e.g. VOICE) must not discard the session.
+            source = SosSource.entries.firstOrNull { it.name == values.getValue(KEY_SOURCE) }
+                ?: SosSource.APP_BUTTON,
             startedAtMillis = values.getValue(KEY_STARTED_AT).toLong(),
             phase = SosPhase.valueOf(values.getValue(KEY_PHASE)),
             alertStatus = values
